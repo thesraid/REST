@@ -1,14 +1,14 @@
 #!/usr/bin/env python
 
 """
-Script to connect a sesnor to a new controller
+Script to connect a sensor to a new controller
 Script will login with the specified account and password
 Sensor will be marked as configured
 
 joriordan@alienvault.com
 2017-05-31
-
 """
+
 import re
 import argparse
 import getpass
@@ -24,7 +24,7 @@ def get_args():
     """Get command line args from the user.
     """
     parser = argparse.ArgumentParser(
-        description='Sensor Key and Controller domain')
+        description='Sensor Key and user details')
 
     parser.add_argument('-s', '--sensor',
                         required=True,
@@ -36,12 +36,10 @@ def get_args():
                         action='store',
                         help='Sensor Key')
 
-    parser.add_argument('-d', '--domain',
-                        required=True,
-                        #type=int,
-                        #default=443,
-                        action='store',
-                        help='Domain to connect to')
+    #parser.add_argument('-d', '--domain',
+                        #required=True,
+                        #action='store',
+                        #help='Domain to connect to')
 
     parser.add_argument('-u', '--user',
                         required=True,
@@ -70,8 +68,8 @@ def get_args():
 
     if not args.password:
         args.password = getpass.getpass(
-            prompt='Enter password for domain %s and user %s: ' %
-                   (args.domain, args.user))
+            prompt='Enter password for user %s: ' %
+                   (args.user))
     return args
 
 #########################################################################################################
@@ -168,6 +166,8 @@ def main():
    # Variable to store the password token. 
    # This is a token we get when we deploy the sensor which will allow us to set the inital password
    PWDTOKEN = "EMPTY"
+   # This variable will be used to store the domain
+   domain = "EMPTY"
 
    # Get the command line argumants and store them in the args variable
    args = get_args()
@@ -175,16 +175,21 @@ def main():
    # Assign each argument to a variable
    key=args.key
    sensor=args.sensor
-   domain=args.domain
+   #domain=args.domain
    user=args.user
    pwd=args.password
    name=args.name
    desc=args.desc
 
-   # Make a directory in the users home to store cookies and other temp files
+   # Make a directory in the users home to store cookies
    home = expanduser("~")
    if not os.path.exists(home + '/.sensor'):
       os.makedirs(home + '/.sensor')
+
+   # Remove exisitng cookies
+   bashCommand = 'rm ' + home + '/.sensor/cookie.txt'
+   json_data, output = runCommand(bashCommand)
+
 
    # Check if the sensor is already connected to something
    # If it is we will exit
@@ -215,7 +220,7 @@ def main():
    # Wait while the connection is in progress
    while (not connected): # While we are not connected
       if not json_data: # If we don't recieve json data that's okay as sometimes we get a bad gateway error back but everything is still ok
-         print "Info: Waiting for " + name + " to connect to " + domain + "..."
+         print "Info: Waiting for " + name + " to configure ..."
          time.sleep(15)
          json_data, output = runCommand(bashCommand) # run the status check command again
       elif json_data: # If we do jet json data back let's have a look at some keys
@@ -232,11 +237,12 @@ def main():
             time.sleep(15)
             json_data, output = runCommand(bashCommand) # Run the check status command again as we still haven't connected
          elif json_data['status'] != "connected": # If the status is anything other than connected print a wait message
-            print "Info: Waiting for " +  domain + " to start..."
+            print "Info: Waiting for the controller to start..."
             time.sleep(15)
             json_data, output = runCommand(bashCommand) # Run the check status command again as we still haven't connected
          elif json_data['status'] == "connected": # We have connected
-            print "Info: Connected!"
+            domain = json_data['masterNode']
+            print "Info: Connected to " + domain
             print output
             print "AV-Action-Token: " + PWDTOKEN # Print he token that we found in the connectedConfiguring stage
             connected = True # Mark connected as true to break the while loop
@@ -276,6 +282,12 @@ def main():
    # Find the setup status for the sensor
    sensor_status = findJSONKey(bashCommand, 'name', name, 'setupStatus')
    print "Info: sensor status is " + sensor_status
+
+
+   # Remove the cookie as it's no longer needed
+   bashCommand = 'rm ' + home + '/.sensor/cookie.txt'
+   json_data, output = runCommand(bashCommand)
+   print "Complete: You may now log into " + domain + " as " + user + " with the password " + pwd
 
 #########################################################################################################
 
