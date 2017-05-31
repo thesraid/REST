@@ -186,10 +186,9 @@ def main():
    if not os.path.exists(home + '/.sensor'):
       os.makedirs(home + '/.sensor')
 
-   # Remove exisitng cookies
-   bashCommand = 'rm ' + home + '/.sensor/cookie.txt'
+   # Remove any old cookie as it's no longer needed
+   bashCommand = 'touch ' + home + '/.sensor/cookie.txt;rm ' + home + '/.sensor/cookie.txt'
    json_data, output = runCommand(bashCommand)
-
 
    # Check if the sensor is already connected to something
    # If it is we will exit
