@@ -1,23 +1,11 @@
 #!/usr/bin/env python
 
 """
-"""
 
-"""
-import sys
-import os
-import subprocess
-import syslog
-import time
-import re
-import atexit
-import argparse
-import getpass
-from datetime import date, datetime, timedelta
-from shutil import copyfile
-from pyVim import connect
-from pyVmomi import vmodl
-from pyVmomi import vim
+Script to connect a sensor to an existing controller
+Script will login with the specified account and password
+Sensor will be marked as configured
+
 """
 
 import re
