@@ -286,7 +286,7 @@ def main():
    # Remove the cookie as it's no longer needed
    bashCommand = 'rm ' + home + '/.sensor/cookie.txt'
    json_data, output = runCommand(bashCommand)
-   print "Complete: You may now log into " + domain + " as " + user + " with the password " + pwd
+   print "Complete: You may now log into https://" + domain + " as " + user + " with the password " + pwd
 
 #########################################################################################################
 
