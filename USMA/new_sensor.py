@@ -295,7 +295,7 @@ def main():
    print "Info: sensor status is " + sensor_status
 
    # Log into the sensor using the precreated key and set the password to Password
-   #syspasswd(sensor)
+   syspasswd(sensor)
 
 
    # Remove the cookie as it's no longer needed
