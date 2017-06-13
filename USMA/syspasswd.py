@@ -34,8 +34,9 @@ def get_args():
 
     if not args.password:
         args.password = getpass.getpass(
-            prompt='Enter password for domain %s and user %s: ' %
-                   (args.domain, args.user))
+            prompt='Enter password: '
+                   )
+        
     return args
 
 #########################################################################################################
