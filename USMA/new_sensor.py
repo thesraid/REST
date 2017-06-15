@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 """
+joriordan@alienvault.com
 Script to connect a sensor to a new controller
 Script will login with the specified account and password
 Sensor will be marked as configured
