@@ -146,7 +146,9 @@ def findJSONKey(bashCommand, search_key, search_string, key):
    # Key: Key you want to get the data for i.e. "uuid"
    
    json_data, output = runCommand(bashCommand)  
-   
+
+   obj_string = "NOT FOUND"   
+ 
    if not json_data:
       print "Error: Didn't receive json output"
       exit()
