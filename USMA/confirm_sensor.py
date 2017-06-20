@@ -46,7 +46,7 @@ def get_args():
 
     parser.add_argument('-n', '--name',
                         required=False,
-                        default='USMA-Sensor',
+                        default='USMA-Sensor-Prod',
                         action='store',
                         help='Sensor Name')
 
