@@ -34,11 +34,6 @@ def get_args():
                         action='store',
                         help='Sensor IP or DNS')
 
-    parser.add_argument('-k', '--key',
-                        required=True,
-                        action='store',
-                        help='Sensor Key')
-
     parser.add_argument('-d', '--domain',
                         required=True,
                         #type=int,
@@ -160,6 +155,23 @@ def findJSONKey(bashCommand, search_key, search_string, key):
    return obj_string
 
 #########################################################################################################
+def findjsonValue(json_data, search_key):
+
+   if not json_data:
+      print "Error: Didn't receive json output"
+      exit()
+   else:
+      for obj in json_data:
+         if obj[search_key]:
+            obj_string = obj[search_key]
+            print "Info:  The " + search_key + " has the value " + obj_string
+         else:
+            obj_string = "NOT FOUND"
+
+   return obj_string
+
+
+#########################################################################################################
 def syspasswd(sensor):
 
    temp_key = open('temp_key','w+')
@@ -179,7 +191,6 @@ def main():
 
    args = get_args()
 
-   key=args.key
    sensor=args.sensor
    domain=args.domain
    user=args.user
@@ -211,6 +222,21 @@ def main():
       print "Error: No valid json output received"
       print output
       exit()
+
+   # Get a sensor key from the Controller
+   # Login to the controller and get a token
+   token = login(domain, user, pwd, home)
+
+   # Curl command for creating a sensor key
+   bashCommand = 'curl -s -k -X POST -H \'Content-Type: application/json\' -H "X-XSRF-TOKEN: ' + token + '" "https://' + domain + '/api/1.0/sensors/key" -b ' + home + '/.sensor/cookie.txt -c ' + home + '/.sensor/cookie.txt'
+   json_data, output = runCommand(bashCommand)
+
+   # Curl command to retrieve the sensor key
+   bashCommand = 'curl -s -k -X GET -H \'Content-Type: application/json\' -H "X-XSRF-TOKEN: ' + token + '" "https://' + domain + '/api/1.0/sensors/key" -b ' + home + '/.sensor/cookie.txt -c ' + home + '/.sensor/cookie.txt'
+   json_data, output = runCommand(bashCommand)
+   key = findjsonValue(json_data, 'id')
+   print "Key : ", key
+   
    
    # Connect the sensor to the controller using the key
    # The is no output from this command when it runs successfully
