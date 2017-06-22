@@ -301,17 +301,17 @@ def main():
    print "Opening Lab_Login_Details.txt"
    student_file = open('Lab_Login_Details.txt','w+')
 
-   student_file.write('STUDENT LAB DETAILS\n')
-   student_file.write('-------------------\n')
-   student_file.write('\n')
-   student_file.write('\n')
-   student_file.write('USM Anywhere URL: ' + domain + '\n')
-   student_file.write('USM Anywhere Username: ' + user + '\n')
-   student_file.write('USM Anywhere Password: ' + pwd + '\n')
-   student_file.write('\n')
-   student_file.write('\n')
-   student_file.write('USM Sensor Username: sysadmin\n')
-   student_file.write('USM Sensor Password: Password\n')
+   student_file.write('STUDENT LAB DETAILS\r\n')
+   student_file.write('-------------------\r\n')
+   student_file.write('\r\n')
+   student_file.write('\r\n')
+   student_file.write('USM Anywhere URL: ' + domain + '\r\n')
+   student_file.write('USM Anywhere Username: ' + user + '\r\n')
+   student_file.write('USM Anywhere Password: ' + pwd + '\r\n')
+   student_file.write('\r\n')
+   student_file.write('\r\n')
+   student_file.write('USM Sensor Username: sysadmin\r\n')
+   student_file.write('USM Sensor Password: Password\r\n')
 
    print 'STUDENT LAB DETAILS'
    print '-------------------'
