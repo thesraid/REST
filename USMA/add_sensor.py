@@ -272,6 +272,7 @@ def main():
    bashCommand = 'rm ' + home + '/.sensor/cookie.txt'
    json_data, output = runCommand(bashCommand)
 
+   # Set the sensor password to Password
    syspasswd(sensor)
 
 #########################################################################################################
