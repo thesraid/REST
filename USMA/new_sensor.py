@@ -311,7 +311,7 @@ def main():
    student_file.write('\r\n')
    student_file.write('\r\n')
    student_file.write('USM Sensor Username: sysadmin\r\n')
-   student_file.write('USM Sensor Password: Password\r\n')
+   student_file.write('USM Sensor Password: ' + pwd + '\r\n')
 
    print 'STUDENT LAB DETAILS'
    print '-------------------'
@@ -323,7 +323,7 @@ def main():
    print ' '
    print ' '
    print 'USM Sensor Username: sysadmin'
-   print 'USM Sensor Password: Password'
+   print 'USM Sensor Password: ' + pwd
 
 
    student_file.close()
