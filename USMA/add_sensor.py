@@ -18,11 +18,6 @@ import time
 from os.path import expanduser
 #########################################################################################################
 
-"""
-Default global variables
-Any of these can be changed if required
-"""
-
 def get_args():
     """Get command line args from the user.
     """
@@ -62,6 +57,12 @@ def get_args():
 			default='USMA Sensor',
                         action='store',
                         help='Sensor Description')
+
+    parser.add_argument('-f', '--force',
+                        required=False,
+                        action='store_true',
+                        help='Force the connection')
+
 
 
     args = parser.parse_args()
@@ -181,6 +182,7 @@ def syspasswd(sensor, pwd):
    os.system('chmod 600 temp_key')
 
    bashCommand = 'ssh -oStrictHostKeyChecking=no -i temp_key root@' + sensor + ' \'echo "sysadmin:' + pwd + '" | chpasswd\''
+   print bashCommand
    os.system(bashCommand)
 
    os.remove('temp_key')
@@ -197,7 +199,10 @@ def main():
    pwd=args.password
    name=args.name
    desc=args.desc
-   
+   force=args.force  
+
+   if force:
+      print "Info: Not checking if the sensor is already connected"
    
    # Make a directory in the users home to store cookies and other temp files
    home = expanduser("~")
@@ -216,8 +221,11 @@ def main():
       if json_data['status'] == 'notConnected':
          print "Info: " + sensor + " is not connected to a controller"
       else:
-         print "Info: " + sensor + " is already connected to " + json_data['masterNode']
-         exit()
+         if force:
+            print "Info: Forcing connection"
+         else:
+               print "Error: " + sensor + " is already connected to " + json_data['masterNode']
+               exit()
    else:
       print "Error: No valid json output received"
       print output

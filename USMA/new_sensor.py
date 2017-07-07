@@ -61,6 +61,10 @@ def get_args():
                         action='store',
                         help='Sensor Description')
 
+    parser.add_argument('-f', '--force',
+                        required=False,
+                        action='store_true',
+                        help='Force the connection')
 
     args = parser.parse_args()
 
@@ -195,6 +199,10 @@ def main():
    pwd=args.password
    name=args.name
    desc=args.desc
+   force=args.force
+
+   if force:
+      print "Info: Not checking if the sensor is already connected"
 
    # Make a directory in the users home to store cookies
    home = expanduser("~")
@@ -213,8 +221,13 @@ def main():
       if json_data['status'] == 'notConnected': # If the value for the status key is notConnected
          print "Info: " + sensor + " is not connected to a controller"
       else: # If the value for the status key is something other than connected
-         print "Info: " + sensor + " is already connected to " + json_data['masterNode'] # Print the name of the controller it's connected to
-         exit()
+         if force:
+            print "Info: Forcing connection"
+         else:
+            print "Error: " + sensor + " is already connected to " + json_data['masterNode']
+            exit()
+         #print "Error: " + sensor + " is already connected to " + json_data['masterNode'] # Print the name of the controller it's connected to
+         #exit()
    else: # If we did not recive json data print the output and exit
       print "Error: No valid json output received"
       print "Error: This may mean the Web service on "  + sensor + " has not started yet"
