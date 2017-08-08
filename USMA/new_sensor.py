@@ -304,11 +304,11 @@ def main():
 
    # Confirm system is marked as configured
    # Curl command for getting a list of sensors
-   bashCommand = 'curl -s -k -X GET -H \'Content-Type: application/json\' -H "X-XSRF-TOKEN: ' + token + '" -d \'{"email":"' + user + '", "password":"' + pwd + '"}\' "https://' + domain + '/api/1.0/sensors" -b ' + home + '/.sensor/cookie.txt -c ' + home + '/.sensor/cookie.txt'
+   # bashCommand = 'curl -s -k -X GET -H \'Content-Type: application/json\' -H "X-XSRF-TOKEN: ' + token + '" -d \'{"email":"' + user + '", "password":"' + pwd + '"}\' "https://' + domain + '/api/1.0/sensors" -b ' + home + '/.sensor/cookie.txt -c ' + home + '/.sensor/cookie.txt'
    # Run the above command
    # Find the setup status for the sensor
-   sensor_status = findJSONKey(bashCommand, 'name', name, 'setupStatus')
-   print "Info: sensor status is " + sensor_status
+   # sensor_status = findJSONKey(bashCommand, 'name', name, 'setupStatus')
+   # print "Info: sensor status is " + sensor_status
 
    # Write the account details to a file
    print "Opening Lab_Login_Details.txt"
