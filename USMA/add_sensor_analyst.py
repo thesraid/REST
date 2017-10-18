@@ -59,11 +59,6 @@ def get_args():
                         action='store',
                         help='Sensor Description')
 
-    parser.add_argument('-o', '--otx',
-                        required=True,
-                        action='store',
-                        help='OTX Key')
-
     parser.add_argument('-f', '--force',
                         required=False,
                         action='store_true',
@@ -122,7 +117,6 @@ def main():
    pwd=args.password
    name=args.name
    desc=args.desc
-   otx=args.otx
    force=args.force
 
    if force:
@@ -141,8 +135,6 @@ def main():
    login_url = 'https://' + domain + '/api/1.0/login'
    sensors_url = 'https://' + domain + '/api/1.0/sensors'
    key_url = 'https://' + domain + '/api/1.0/sensors/key'
-   sensor_uuid = 'To be added later'
-   otx_url = 'https://' + domain + '/api/1.0/threatIntelligence/AlienvaultOTX'
 
 
    """
@@ -169,14 +161,6 @@ def main():
 
    """ Login using the username, cookie and XSRF token """
    response = s.post(login_url, headers=headers, data=data)
-
-   #""" Get a list of users on the system """
-   #s, headers = getToken(s)
-   #response = s.get(users_url, headers=headers)
-   #print headers
-   #print response.json()
-   #print response.text
-
 
    """ 
    # Generate a sensor key 
@@ -215,47 +199,6 @@ def main():
 
    print "Status:", status
   
-   
-   """
-   Get Sensor UUID
-   """
-   s, headers = getToken(s)
-   response = s.get(sensors_url, headers=headers, data=data)
-   """ 
-   Receive a list of details about sensors
-   Iterate through the list of objects to find one with the name of our sensor
-   Then pull out it's uuid
-   """
-   for obj in response.json():
-      if obj['name'] == name:
-         uuid = obj['uuid']
-  
-   print "UUID:", uuid
-   sensor_uuid = 'https://' + domain + '/api/1.0/sensors/' + uuid
-
-   """
-   Add the OTX key
-   """
-   otx_raw = {'appName':'AlienvaultOTX','properties':{'otxPassword':otx}}
-   otx_data = json.dumps(otx_raw)
-   s, headers = getToken(s)
-   response = s.put(otx_url, headers=headers, data=otx_data)
-   print response.text
-
-   """
-   Mark the sensor as configured
-   """
-   s, headers = getToken(s)
-   #""" 
-   #Copy the existing data variable that we use and add the field setupStatus
-   #we will use this field to update the sensors status
-   #"""
-   setup_raw = {'setupStatus': 'Complete'}
-   setup_data = json.dumps(setup_raw)
-   #response = s.get(sensor_uuid, headers=headers, data=setup_data)
-   response = s.patch(sensor_uuid, headers=headers, data=setup_data)
-   print response.text
-
 ###########################################################################################
 
 """ Start program """
