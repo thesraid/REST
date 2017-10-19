@@ -95,7 +95,8 @@ Exits if the response contains an error key
 def jsonSearch(response, searchString):
    for obj, value in response.json().items():
       if obj == "error":
-         print "ERROR: " + (response.json()['error'])
+         print colored ("ERROR: " + (response.json()['error']), 'red')
+         print colored ("Raw Log: " + response.text, 'green')
          exit()
       else:
          key = (response.json()[searchString])
