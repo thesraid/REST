@@ -90,17 +90,25 @@ def jsonSearch(response, searchString):
 
 ###########################################################################################
 """
-Iterate through a json dictionary and print out every key/value
+Get the ids of the assets in the supplied list
 """
+def getAssetIDs(s, assetNamesList):
 
-def myprint(d):
-   for k, v in d.items():
-      if isinstance(v, dict):
-         myprint(v)
-      else:
-         print("{0} : {1}".format(k, v))
+   search_url = 'https://' + domain + '/api/1.0/search/aql'
+   asset_ids = []
 
-   return
+   search_raw = {'define':{'a':{'type':'Asset'},'g':{'type':'AssetGroup','join':'a','relationship':'AssetMemberOfAssetGroup','fromLeft':'true'},'s':{'type':'Service','join':'a','relationship':'AssetHasService','fromLeft':'true'},'c':{'type':'CPEItem','join':'a','relationship':'AssetHasCPEItem','fromLeft':'true'}},'where':[{'and':{'==':{'a.knownAsset':'true'}}}],'return':{'assets':{'object':'a','page':{'start':0,'count':20},'inject':{'AssetHasNetworkInterface':{'relationship':'AssetHasNetworkInterface','fromLeft':'true','inject':{'NetworkInterfaceHasHostname':{'relationship':'NetworkInterfaceHasHostname','fromLeft':'true'}}},'AssetHasCredentials':{'relationship':'AssetHasCredentials','fromLeft':'true'}},'sort':['a.dateUpdated desc']},'agg_operatingSystem':{'aggregation':'a.operatingSystem','sort':['count desc','value asc']},'agg_deviceType':{'aggregation':'a.deviceType','sort':['count desc','value asc']},'agg_assetOriginType':{'aggregation':'a.assetOriginType','sort':['count desc','value asc']},'agg_AssetMemberOfAssetGroup':{'aggregation':'g.id','sort':['count desc','value asc']},'agg_assetService':{'aggregation':'s.data','sort':['count desc','value asc']},'agg_assetSoftware':{'aggregation':'c.name','sort':['count desc','value asc']},'agg_assetOriginUUID':{'aggregation':'a.assetOriginUUID','sort':['count desc','value asc']}}}
+   search_data = json.dumps(search_raw)
+   s, headers = getToken(s)
+   response = s.post(search_url, headers=headers, data=search_data)
+
+   for asset in assetNamesList:
+      for obj in response.json()['assets']['results']:
+         if obj['name'] == asset:
+            print colored ("      INFO: Found " + asset, "green")
+            asset_ids.append(obj["id"])
+
+   return asset_ids
 
 ###########################################################################################
 """
@@ -110,6 +118,7 @@ def main():
 
    args = get_args()
 
+   global domain
    domain=args.domain
    user=args.user
    pwd=args.password
@@ -121,8 +130,6 @@ def main():
    """ Frequently used vars, json and URLS """
    name= "USMA-Sensor"
    desc= "USMA Sensor"
-   data_raw = {"email":user, "password":pwd}
-   data = json.dumps(data_raw)
    global users_url 
    users_url = 'https://' + domain + '/api/1.0/users'
    login_url = 'https://' + domain + '/api/1.0/login'
@@ -135,8 +142,8 @@ def main():
    assetDiscovery_url = 'https://' + domain + '/api/1.0/apps/nmap/assetDiscovery?sensorId='
    scheduler_url = 'https://' + domain + '/api/1.0/scheduler'
    status_url = 'https://' + domain + '/api/1.0/status'
-   search_url = 'https://' + domain + '/api/1.0/search/aql'
    authScan_url = 'https://' + domain + '/api/1.0/apps/joval/groupScan'
+   search_url = 'https://' + domain + '/api/1.0/search/aql'
    credentials_url = 'https://' + domain + '/api/1.0/credentials'
    pci_assets = ['192.168.250.13', '192.168.250.14', '192.168.250.17']
    pci_asset_ids = []
@@ -154,6 +161,8 @@ def main():
 
    """ Login using the username, cookie and XSRF token """
    print colored ("INFO: Logging in", "green")
+   data_raw = {"email":user, "password":pwd}
+   data = json.dumps(data_raw)
    response = s.post(login_url, headers=headers, data=data)
 
 
@@ -201,7 +210,7 @@ def main():
    """
    Perform an Asset Discovery Scan of the above asset group
    """
-   """print colored ("INFO: Running an asset discovery scan on USMA-Sensor-Network", "green")
+   print colored ("INFO: Running an asset discovery scan on USMA-Sensor-Network", "green")
    scan_raw = {'uuid':assetGroupID,'scan_profile':'fast'}
    scan_data = json.dumps(scan_raw)
    s, headers = getToken(s)
@@ -209,9 +218,7 @@ def main():
    scanJobID = jsonSearch(response, 'jobs')
 
    """
-   """
    Print the progress of the Scan of the above asset group
-   """
    """
    status = "In Progress"
    while status != 'Successful':
@@ -221,7 +228,7 @@ def main():
       status = jsonSearch(response, 'status')
       log = jsonSearch(response, 'log')
       print colored ("      Status: " + status + " " + log, "green")
-   """
+   
    """
    Create a scheduled task to run a daily scan
    """
@@ -353,16 +360,7 @@ def main():
    Find the two windows assets IDs
    """
    print colored ("INFO: Finding Windows assets", "green")
-   s, headers = getToken(s)
-   search_raw = {'define':{'a':{'type':'Asset'},'g':{'type':'AssetGroup','join':'a','relationship':'AssetMemberOfAssetGroup','fromLeft':'true'},'s':{'type':'Service','join':'a','relationship':'AssetHasService','fromLeft':'true'},'c':{'type':'CPEItem','join':'a','relationship':'AssetHasCPEItem','fromLeft':'true'}},'where':[{'and':{'==':{'a.knownAsset':'true'}}}],'return':{'assets':{'object':'a','page':{'start':0,'count':20},'inject':{'AssetHasNetworkInterface':{'relationship':'AssetHasNetworkInterface','fromLeft':'true','inject':{'NetworkInterfaceHasHostname':{'relationship':'NetworkInterfaceHasHostname','fromLeft':'true'}}},'AssetHasCredentials':{'relationship':'AssetHasCredentials','fromLeft':'true'}},'sort':['a.dateUpdated desc']},'agg_operatingSystem':{'aggregation':'a.operatingSystem','sort':['count desc','value asc']},'agg_deviceType':{'aggregation':'a.deviceType','sort':['count desc','value asc']},'agg_assetOriginType':{'aggregation':'a.assetOriginType','sort':['count desc','value asc']},'agg_AssetMemberOfAssetGroup':{'aggregation':'g.id','sort':['count desc','value asc']},'agg_assetService':{'aggregation':'s.data','sort':['count desc','value asc']},'agg_assetSoftware':{'aggregation':'c.name','sort':['count desc','value asc']},'agg_assetOriginUUID':{'aggregation':'a.assetOriginUUID','sort':['count desc','value asc']}}}
-   search_data = json.dumps(search_raw)
-   response = s.post(search_url, headers=headers, data=search_data)
-
-   for asset in win_assets:
-      for obj in response.json()['assets']['results']:
-         if obj['name'] == asset:
-            print colored ("      INFO: Found " + asset, "green")
-            win_asset_ids.append(obj["id"])
+   win_asset_ids = getAssetIDs(s, win_assets)         
 
    """
    Assign the two windows systems the newly created credentials
@@ -377,16 +375,7 @@ def main():
    Find the two linux asset IDs
    """
    print colored ("INFO: Finding the Linux asset", "green")
-   s, headers = getToken(s)
-   search_raw = {'define':{'a':{'type':'Asset'},'g':{'type':'AssetGroup','join':'a','relationship':'AssetMemberOfAssetGroup','fromLeft':'true'},'s':{'type':'Service','join':'a','relationship':'AssetHasService','fromLeft':'true'},'c':{'type':'CPEItem','join':'a','relationship':'AssetHasCPEItem','fromLeft':'true'}},'where':[{'and':{'==':{'a.knownAsset':'true'}}}],'return':{'assets':{'object':'a','page':{'start':0,'count':20},'inject':{'AssetHasNetworkInterface':{'relationship':'AssetHasNetworkInterface','fromLeft':'true','inject':{'NetworkInterfaceHasHostname':{'relationship':'NetworkInterfaceHasHostname','fromLeft':'true'}}},'AssetHasCredentials':{'relationship':'AssetHasCredentials','fromLeft':'true'}},'sort':['a.dateUpdated desc']},'agg_operatingSystem':{'aggregation':'a.operatingSystem','sort':['count desc','value asc']},'agg_deviceType':{'aggregation':'a.deviceType','sort':['count desc','value asc']},'agg_assetOriginType':{'aggregation':'a.assetOriginType','sort':['count desc','value asc']},'agg_AssetMemberOfAssetGroup':{'aggregation':'g.id','sort':['count desc','value asc']},'agg_assetService':{'aggregation':'s.data','sort':['count desc','value asc']},'agg_assetSoftware':{'aggregation':'c.name','sort':['count desc','value asc']},'agg_assetOriginUUID':{'aggregation':'a.assetOriginUUID','sort':['count desc','value asc']}}}
-   search_data = json.dumps(search_raw)
-   response = s.post(search_url, headers=headers, data=search_data)
-
-   for asset in lin_assets:
-      for obj in response.json()['assets']['results']:
-         if obj['name'] == asset:
-            print colored ("      INFO: Found " + asset, "green")
-            lin_asset_ids.append(obj["id"])
+   lin_asset_ids = getAssetIDs(s, lin_assets)
 
    """
    Assign the linux system the newly created credentials
