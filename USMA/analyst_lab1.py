@@ -136,8 +136,15 @@ def main():
    scheduler_url = 'https://' + domain + '/api/1.0/scheduler'
    status_url = 'https://' + domain + '/api/1.0/status'
    search_url = 'https://' + domain + '/api/1.0/search/aql'
+   authScan_url = 'https://' + domain + '/api/1.0/apps/joval/groupScan'
+   credentials_url = 'https://' + domain + '/api/1.0/credentials'
    pci_assets = ['192.168.250.13', '192.168.250.14', '192.168.250.17']
    pci_asset_ids = []
+   pci_asset_objs = []
+   win_assets = ['192.168.250.14', '192.168.250.17']
+   win_asset_ids = []
+   lin_assets = ['192.168.250.13']
+   lin_asset_ids = []
 
    """
    Find the XSRF-TOKEN in the cookie
@@ -245,7 +252,10 @@ def main():
 
 
 
+
    """ ### EXERCISE 2 ### """
+
+
 
    """
    Query the Asset Group for the IDS of the 3 machines we want to add to the PCI group 
@@ -291,6 +301,7 @@ def main():
          if obj['name'] == asset:
             print colored ("      INFO: Found " + asset, "green")
             pci_asset_ids.append(obj["id"])
+            pci_asset_objs.append(obj)
 
    """
    Add each pci asset to the PCI group
@@ -301,10 +312,104 @@ def main():
    pci_data = json.dumps(pci_raw)
    response = s.patch(assets_url, headers=headers, data=pci_data)
 
+   """
+   Create a static group with the same assets as members
+   """
+   print colored ("INFO: Adding internal assets to a new static group", "green")
+   s, headers = getToken(s)
+   group_raw = {'name':'All Internal Assets','description':'All Internal Servers for Vulnerability Scan','nmapExcludeFromScan':'false','groupType':'network','static':'true','addRule':{},'metadata':{},'members':3, 'AssetMemberOfAssetGroup':pci_asset_objs,'isCidrGroup':'false'}
+   group_data = json.dumps(group_raw)
+   response = s.post(assetGroups_url, headers=headers, data=group_data)
+   group_id = jsonSearch(response, 'result')  
 
+
+
+   """ ### EXERCISE 3 ### """
+
+
+
+
+   """
+   Create Linux SSH Credentials
+   """
+   print colored ("INFO: Creating Linux SSH credentials", "green")
+   s, headers = getToken(s)
+   cred_raw = {'id':None,'type':'SSH','name':'Linux SSH','description':'These are login credentials for the Linux VM','user':'root','password':'Password1!','port':22,'key':'','passphrase':None,'escalationType':'SUDO','escalationUsername':None,'escalationPassword':'','domain':None,'authMethod':'password'}
+   cred_data = json.dumps(cred_raw)
+   response = s.post(credentials_url, headers=headers, data=cred_data)
+   lin_cred_id = jsonSearch(response, 'id')
+   
+   """
+   Create Windows RM Credentials
+   """
+   print colored ("INFO: Creating Windows RM credentials", "green")
+   s, headers = getToken(s)
+   cred_raw = {"id":None,"type":"WINDOWS","name":"Win2K12 Prod","description":"These are login credentials for the Win2K12 production assets","user":"Administrator","password":"Password1!","port":5985,"key":"","passphrase":None,"escalationType":None,"escalationUsername":None,"escalationPassword":"","domain":None,"authMethod":None}
+   cred_data = json.dumps(cred_raw)
+   response = s.post(credentials_url, headers=headers, data=cred_data)
+   win_cred_id = jsonSearch(response, 'id')
+
+   """
+   Find the two windows assets IDs
+   """
+   print colored ("INFO: Finding Windows assets", "green")
+   s, headers = getToken(s)
+   search_raw = {'define':{'a':{'type':'Asset'},'g':{'type':'AssetGroup','join':'a','relationship':'AssetMemberOfAssetGroup','fromLeft':'true'},'s':{'type':'Service','join':'a','relationship':'AssetHasService','fromLeft':'true'},'c':{'type':'CPEItem','join':'a','relationship':'AssetHasCPEItem','fromLeft':'true'}},'where':[{'and':{'==':{'a.knownAsset':'true'}}}],'return':{'assets':{'object':'a','page':{'start':0,'count':20},'inject':{'AssetHasNetworkInterface':{'relationship':'AssetHasNetworkInterface','fromLeft':'true','inject':{'NetworkInterfaceHasHostname':{'relationship':'NetworkInterfaceHasHostname','fromLeft':'true'}}},'AssetHasCredentials':{'relationship':'AssetHasCredentials','fromLeft':'true'}},'sort':['a.dateUpdated desc']},'agg_operatingSystem':{'aggregation':'a.operatingSystem','sort':['count desc','value asc']},'agg_deviceType':{'aggregation':'a.deviceType','sort':['count desc','value asc']},'agg_assetOriginType':{'aggregation':'a.assetOriginType','sort':['count desc','value asc']},'agg_AssetMemberOfAssetGroup':{'aggregation':'g.id','sort':['count desc','value asc']},'agg_assetService':{'aggregation':'s.data','sort':['count desc','value asc']},'agg_assetSoftware':{'aggregation':'c.name','sort':['count desc','value asc']},'agg_assetOriginUUID':{'aggregation':'a.assetOriginUUID','sort':['count desc','value asc']}}}
+   search_data = json.dumps(search_raw)
+   response = s.post(search_url, headers=headers, data=search_data)
+
+   for asset in win_assets:
+      for obj in response.json()['assets']['results']:
+         if obj['name'] == asset:
+            print colored ("      INFO: Found " + asset, "green")
+            win_asset_ids.append(obj["id"])
+
+   """
+   Assign the two windows systems the newly created credentials
+   """
+   print colored ("INFO: Assigning credentials to Windows assets", "green")
+   s, headers = getToken(s)
+   win_raw = win_asset_ids
+   win_data = json.dumps(win_raw)
+   response = s.post(credentials_url + '/' + win_cred_id + '/assets', headers=headers, data=win_data)
+
+   """
+   Find the two linux asset IDs
+   """
+   print colored ("INFO: Finding the Linux asset", "green")
+   s, headers = getToken(s)
+   search_raw = {'define':{'a':{'type':'Asset'},'g':{'type':'AssetGroup','join':'a','relationship':'AssetMemberOfAssetGroup','fromLeft':'true'},'s':{'type':'Service','join':'a','relationship':'AssetHasService','fromLeft':'true'},'c':{'type':'CPEItem','join':'a','relationship':'AssetHasCPEItem','fromLeft':'true'}},'where':[{'and':{'==':{'a.knownAsset':'true'}}}],'return':{'assets':{'object':'a','page':{'start':0,'count':20},'inject':{'AssetHasNetworkInterface':{'relationship':'AssetHasNetworkInterface','fromLeft':'true','inject':{'NetworkInterfaceHasHostname':{'relationship':'NetworkInterfaceHasHostname','fromLeft':'true'}}},'AssetHasCredentials':{'relationship':'AssetHasCredentials','fromLeft':'true'}},'sort':['a.dateUpdated desc']},'agg_operatingSystem':{'aggregation':'a.operatingSystem','sort':['count desc','value asc']},'agg_deviceType':{'aggregation':'a.deviceType','sort':['count desc','value asc']},'agg_assetOriginType':{'aggregation':'a.assetOriginType','sort':['count desc','value asc']},'agg_AssetMemberOfAssetGroup':{'aggregation':'g.id','sort':['count desc','value asc']},'agg_assetService':{'aggregation':'s.data','sort':['count desc','value asc']},'agg_assetSoftware':{'aggregation':'c.name','sort':['count desc','value asc']},'agg_assetOriginUUID':{'aggregation':'a.assetOriginUUID','sort':['count desc','value asc']}}}
+   search_data = json.dumps(search_raw)
+   response = s.post(search_url, headers=headers, data=search_data)
+
+   for asset in lin_assets:
+      for obj in response.json()['assets']['results']:
+         if obj['name'] == asset:
+            print colored ("      INFO: Found " + asset, "green")
+            lin_asset_ids.append(obj["id"])
+
+   """
+   Assign the linux system the newly created credentials
+   """
+   print colored ("INFO: Assigning credentials to the Linux asset", "green")
+   s, headers = getToken(s)
+   lin_raw = lin_asset_ids
+   lin_data = json.dumps(lin_raw)
+   response = s.post(credentials_url + '/' + lin_cred_id + '/assets', headers=headers, data=lin_data)
+
+
+   """
+   Perform a vulnerability scan against the internal assets static group
+   """
+   print colored ("INFO: Starting Authenticated Scan for the Internal Assets Group", "green")
+   s, headers = getToken(s)
+   authScan_raw = {'uuid':group_id}
+   authScan_data = json.dumps(authScan_raw)
+   response = s.post(authScan_url, headers=headers, data=authScan_data)
 
 
    print colored ("INFO: Script completed", "green")
+
 
 ###########################################################################################
 
