@@ -91,9 +91,13 @@ def main():
 
    # Write the results to a file in the current directory
    print colored ("INFO: Writing to results.txt", "green")
-   results_file = open('results.txt','a+')
 
    for key in key_list:
+
+      results_file = open('results.txt','a+')
+      
+      print " "
+      print colored ("INFO: Key - " + key, "green")
       """ Create a session - stores cookies """
       s = requests.Session()
    
