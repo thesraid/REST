@@ -120,6 +120,7 @@ def main():
          output = jsonSearch(response.json(), 'message')
          print colored ("      WAIT: " + output, "blue")
          if output == "Invalid Authentication Code":
+            print colored ("ERROR: Invalid Authentication Code", "red")
             exit()
          if output != "node activated":
             time.sleep(120)
