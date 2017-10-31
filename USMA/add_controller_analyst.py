@@ -3,7 +3,7 @@
 
 """
 joriordan@alienvault.com
-Script to crreate a controller and reset the password
+Script to create a controller and reset the password
 
 """
 
@@ -130,7 +130,6 @@ def main():
       inital_user = jsonSearch(connection, 'initialUser') 
       controller = "https://" + jsonSearch(connection, 'masterNode') 
    
-   
       print colored ("INFO: Inital Password - " + inital_pass, "green")
       print colored ("INFO: Inital User     - " + inital_user, "green")
       print colored ("INFO: Controller      - " + controller, "green")
@@ -154,6 +153,8 @@ def main():
          response = s.post(login_url, headers=headers, data=data)
       except:
          print response.text
+         results_file.write('ERROR:', response.text)
+         results_file.close()
          exit()
    
       """ Get the user ID """
@@ -164,6 +165,8 @@ def main():
          response = s.get(user_url, headers=headers, data=data)
       except:
          print response.text
+         results_file.write('ERROR:', response.text)
+         results_file.close()
          exit()
 
       loginAttempts = jsonSearch(response.json(),'loginAttempts')
@@ -206,6 +209,8 @@ def main():
          response = s.put(userme_url, headers=headers, data=data)
       except:
          print response.text
+         results_file.write('ERROR:', response.text)
+         results_file.close()
          exit()
 
       result = jsonSearch(response.json(),'result')
