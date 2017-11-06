@@ -77,13 +77,17 @@ Exits if the response contains an error key
 """
 
 def jsonSearch(response, searchString):
-   for obj, value in response.json().items():
-      if obj == "error":
-         print colored ("ERROR: " + (response.json()['error']), 'red')
-         print response.text
-         exit()
-      else:
-         key = (response.json()[searchString])
+   try:
+      for obj, value in response.json().items():
+         if obj == "error":
+            print colored ("ERROR: " + (response.json()['error']), 'red')
+            print "Raw Log: " + response.text
+            exit()
+         else:
+            key = (response.json()[searchString])
+   except KeyError:
+      print colored ("ERROR: " + response.text, "red")
+      exit()
 
    return key
 
@@ -100,7 +104,12 @@ def getAssetIDs(s, assetNamesList):
    search_raw = {'define':{'a':{'type':'Asset'},'g':{'type':'AssetGroup','join':'a','relationship':'AssetMemberOfAssetGroup','fromLeft':'true'},'s':{'type':'Service','join':'a','relationship':'AssetHasService','fromLeft':'true'},'c':{'type':'CPEItem','join':'a','relationship':'AssetHasCPEItem','fromLeft':'true'}},'where':[{'and':{'==':{'a.knownAsset':'true'}}}],'return':{'assets':{'object':'a','page':{'start':0,'count':20},'inject':{'AssetHasNetworkInterface':{'relationship':'AssetHasNetworkInterface','fromLeft':'true','inject':{'NetworkInterfaceHasHostname':{'relationship':'NetworkInterfaceHasHostname','fromLeft':'true'}}},'AssetHasCredentials':{'relationship':'AssetHasCredentials','fromLeft':'true'}},'sort':['a.dateUpdated desc']},'agg_operatingSystem':{'aggregation':'a.operatingSystem','sort':['count desc','value asc']},'agg_deviceType':{'aggregation':'a.deviceType','sort':['count desc','value asc']},'agg_assetOriginType':{'aggregation':'a.assetOriginType','sort':['count desc','value asc']},'agg_AssetMemberOfAssetGroup':{'aggregation':'g.id','sort':['count desc','value asc']},'agg_assetService':{'aggregation':'s.data','sort':['count desc','value asc']},'agg_assetSoftware':{'aggregation':'c.name','sort':['count desc','value asc']},'agg_assetOriginUUID':{'aggregation':'a.assetOriginUUID','sort':['count desc','value asc']}}}
    search_data = json.dumps(search_raw)
    s, headers = getToken(s)
-   response = s.post(search_url, headers=headers, data=search_data)
+   try:
+      response = s.post(search_url, headers=headers, data=search_data)
+   except:
+      print colored ("Error: Cannot access " + search_url, "red")
+      print "RAW: " + response.text
+      exit()
 
    for asset in assetNamesList:
       for obj in response.json()['assets']['results']:
@@ -163,7 +172,12 @@ def main():
    print colored ("INFO: Logging in", "green")
    data_raw = {"email":user, "password":pwd}
    data = json.dumps(data_raw)
-   response = s.post(login_url, headers=headers, data=data)
+   try:
+      response = s.post(login_url, headers=headers, data=data)
+   except:
+      print colored ("Error: Cannot access " + login_url, "red")
+      print "RAW: " + response.text
+      exit()
 
 
    """
@@ -171,7 +185,13 @@ def main():
    """
    print colored ("INFO: Searching for sensor", "green")
    s, headers = getToken(s)
-   response = s.get(sensors_url, headers=headers, data=data)
+   try:
+      response = s.get(sensors_url, headers=headers, data=data)
+   except:
+      print colored ("Error: Cannot access " + sensors_url, "red")
+      print "RAW: " + response.text
+      exit()
+
    """ 
    Receive a list of details about sensors
    Iterate through the list of objects to find one with the name of our sensor
@@ -204,7 +224,12 @@ def main():
    group_raw = {'name':'USMA-Sensor-Network','description':'Dynamic asset group created from CIDR 192.168.250.0/25','excludeFromScan':'false','static':'false','AssetMemberOfAssetGroup':[],'addRule':{'define':{'a':{'type':'Asset'},'n':{'type':'NetworkInterface','join':'a','relationship':'AssetHasNetworkInterface','fromLeft':'true'}},'where':[{'and':{'in':{'n.ipAddress':'192.168.250.0/25'},'==':{'a.knownAsset':'true'}}}],'return':{'assets':{'value':'a.id'}}},'metadata':{'state':{'facet':'assets','title':'Investigate','chart':'false','page':{'current':1,'total':None},'limit':20,'bindings':{'match_all':[],'filters':{'assetSearch':{'value':[{'field':'n.ipAddress','operator':'in','values':['192.168.250.0/25']}]},'stats':{'value':None},'knownAsset':{'value':'true'},'operatingSystem':{'value':None},'deviceType':{'value':None},'assetOriginType':{'value':None},'AssetMemberOfAssetGroup':{'value':None},'assetService':{'value':None},'assetSoftware':{'value':None},'assetInstance':{'value':None},'assetRegion':{'value':None},'assetOriginUUID':{'value':None}},'sort':{'dateUpdated':'desc'}},'collapse':{'filters':'false'},'filters':['assetSearch','stats','assetOriginUUID','assetOriginType','AssetMemberOfAssetGroup','assetInstance','assetRegion','operatingSystem','deviceType','assetService','assetSoftware'],'columns':['noes_checkbox','asset_bookmark','asset_name','AssetHasCredentials','AssetHasDomainName','AssetHasNetworkInterface','assetOriginUUID','jobs','deviceType','alarmCount','eventCount','vulnerabilityCount','configurationCount','dateUpdated'],'column_names':{}}},'isCidrGroup':'true','groupType':'network'}
    group_data = json.dumps(group_raw)
    s, headers = getToken(s)
-   response = s.post(assetGroups_url, headers=headers, data=group_data)
+   try:
+      response = s.post(assetGroups_url, headers=headers, data=group_data)
+   except:
+      print colored ("Error: Cannot access " + assetGroups_url, "red")
+      print "RAW: " + response.text
+      exit()
    assetGroupID = jsonSearch(response, 'result')
 
    """
@@ -214,7 +239,12 @@ def main():
    scan_raw = {'uuid':assetGroupID,'scan_profile':'fast'}
    scan_data = json.dumps(scan_raw)
    s, headers = getToken(s)
-   response = s.post(assetDiscovery_url + sensor_uuid, headers=headers, data=scan_data)
+   try:
+      response = s.post(assetDiscovery_url + sensor_uuid, headers=headers, data=scan_data)
+   except:
+      print colored ("Error: Cannot access " + assetDiscovery_url, "red")
+      print "RAW: " + response.text
+      exit()
    scanJobID = jsonSearch(response, 'jobs')
 
    """
@@ -236,7 +266,12 @@ def main():
    scheduler_raw = {'sensor':sensor_uuid,'app':'nmap','action':'assetDiscovery','name':'Daily Scan for USMA-Sensor-network','description':None,'type':'groupScan','schedule':'0 0 23 1/1 * ? *','params':{'uuid':assetGroupID,'scan_profile':'fast'}}
    scheduler_data = json.dumps(scheduler_raw)
    s, headers = getToken(s)
-   response = s.post(scheduler_url, headers=headers, data=scheduler_data)
+   try:
+      response = s.post(scheduler_url, headers=headers, data=scheduler_data)
+   except:
+      print colored ("Error: Cannot access " + scheduler_url, "red")
+      print "RAW: " + response.text
+      exit()
    
 
    """
@@ -246,7 +281,12 @@ def main():
    otx_raw = {'appName':'AlienvaultOTX','properties':{'otxPassword':otx}}
    otx_data = json.dumps(otx_raw)
    s, headers = getToken(s)
-   response = s.put(otx_url, headers=headers, data=otx_data)
+   try:
+      response = s.put(otx_url, headers=headers, data=otx_data)
+   except:
+      print colored ("Error: Cannot access " + otx_url, "red")
+      print "RAW: " + response.text
+      exit()
 
    """
    Mark the sensor as configured
@@ -255,7 +295,12 @@ def main():
    setup_raw = {'setupStatus': 'Complete'}
    setup_data = json.dumps(setup_raw)
    s, headers = getToken(s)
-   response = s.patch(sensor_uuid_url, headers=headers, data=setup_data)
+   try:
+      response = s.patch(sensor_uuid_url, headers=headers, data=setup_data)
+   except:
+      print colored ("Error: Cannot access " + sensor_uuid_url, "red")
+      print "RAW: " + response.text
+      exit()
 
 
 
@@ -271,7 +316,12 @@ def main():
    s, headers = getToken(s)
    search_raw = {'define':{'a':{'type':'Asset'},'g':{'type':'AssetGroup','join':'a','relationship':'AssetMemberOfAssetGroup','fromLeft':'true'},'s':{'type':'Service','join':'a','relationship':'AssetHasService','fromLeft':'true'},'c':{'type':'CPEItem','join':'a','relationship':'AssetHasCPEItem','fromLeft':'true'}},'where':[{'and':{'==':{'a.knownAsset':'true'}}}],'return':{'assets':{'object':'a','page':{'start':0,'count':20},'inject':{'AssetHasNetworkInterface':{'relationship':'AssetHasNetworkInterface','fromLeft':'true','inject':{'NetworkInterfaceHasHostname':{'relationship':'NetworkInterfaceHasHostname','fromLeft':'true'}}},'AssetHasCredentials':{'relationship':'AssetHasCredentials','fromLeft':'true'}},'sort':['a.dateUpdated desc']},'agg_operatingSystem':{'aggregation':'a.operatingSystem','sort':['count desc','value asc']},'agg_deviceType':{'aggregation':'a.deviceType','sort':['count desc','value asc']},'agg_assetOriginType':{'aggregation':'a.assetOriginType','sort':['count desc','value asc']},'agg_AssetMemberOfAssetGroup':{'aggregation':'g.id','sort':['count desc','value asc']},'agg_assetService':{'aggregation':'s.data','sort':['count desc','value asc']},'agg_assetSoftware':{'aggregation':'c.name','sort':['count desc','value asc']},'agg_assetOriginUUID':{'aggregation':'a.assetOriginUUID','sort':['count desc','value asc']}}}
    search_data = json.dumps(search_raw)
-   response = s.post(search_url, headers=headers, data=search_data)
+   try:
+      response = s.post(search_url, headers=headers, data=search_data)
+   except:
+      print colored ("Error: Cannot access " + search_url, "red")
+      print "RAW: " + response.text
+      exit()
    
    """
    The for statement delves into the json to find the key "results" which is a child of the key "assets"
@@ -317,7 +367,12 @@ def main():
    s, headers = getToken(s)
    pci_raw = {'assets':pci_asset_ids,'tags':[{'name':'pci','type':'Boolean','value':'true'}]}
    pci_data = json.dumps(pci_raw)
-   response = s.patch(assets_url, headers=headers, data=pci_data)
+   try:
+      response = s.patch(assets_url, headers=headers, data=pci_data)
+   except:
+      print colored ("Error: Cannot access " + assets_url, "red")
+      print "RAW: " + response.text
+      exit()
 
    """
    Create a static group with the same assets as members
@@ -326,7 +381,12 @@ def main():
    s, headers = getToken(s)
    group_raw = {'name':'All Internal Assets','description':'All Internal Servers for Vulnerability Scan','nmapExcludeFromScan':'false','groupType':'network','static':'true','addRule':{},'metadata':{},'members':3, 'AssetMemberOfAssetGroup':pci_asset_objs,'isCidrGroup':'false'}
    group_data = json.dumps(group_raw)
-   response = s.post(assetGroups_url, headers=headers, data=group_data)
+   try:
+      response = s.post(assetGroups_url, headers=headers, data=group_data)
+   except:
+      print colored ("Error: Cannot access " + assetGroups_url, "red")
+      print "RAW: " + response.text
+      exit()
    group_id = jsonSearch(response, 'result')  
 
 
@@ -343,7 +403,12 @@ def main():
    s, headers = getToken(s)
    cred_raw = {'id':None,'type':'SSH','name':'Linux SSH','description':'These are login credentials for the Linux VM','user':'root','password':'Password1!','port':22,'key':'','passphrase':None,'escalationType':'SUDO','escalationUsername':None,'escalationPassword':'','domain':None,'authMethod':'password'}
    cred_data = json.dumps(cred_raw)
-   response = s.post(credentials_url, headers=headers, data=cred_data)
+   try:
+      response = s.post(credentials_url, headers=headers, data=cred_data)
+   except:
+      print colored ("Error: Cannot access " + credentials_url, "red")
+      print "RAW: " + response.text
+      exit()
    lin_cred_id = jsonSearch(response, 'id')
    
    """
@@ -353,7 +418,12 @@ def main():
    s, headers = getToken(s)
    cred_raw = {"id":None,"type":"WINDOWS","name":"Win2K12 Prod","description":"These are login credentials for the Win2K12 production assets","user":"Administrator","password":"Password1!","port":5985,"key":"","passphrase":None,"escalationType":None,"escalationUsername":None,"escalationPassword":"","domain":None,"authMethod":None}
    cred_data = json.dumps(cred_raw)
-   response = s.post(credentials_url, headers=headers, data=cred_data)
+   try:
+      response = s.post(credentials_url, headers=headers, data=cred_data)
+   except:
+      print colored ("Error: Cannot access " + credentials_url, "red")
+      print "RAW: " + response.text
+      exit()
    win_cred_id = jsonSearch(response, 'id')
 
    """
@@ -369,7 +439,12 @@ def main():
    s, headers = getToken(s)
    win_raw = win_asset_ids
    win_data = json.dumps(win_raw)
-   response = s.post(credentials_url + '/' + win_cred_id + '/assets', headers=headers, data=win_data)
+   try:
+      response = s.post(credentials_url + '/' + win_cred_id + '/assets', headers=headers, data=win_data)
+   except:
+      print colored ("Error: Cannot access " + credentials_url, "red")
+      print "RAW: " + response.text
+      exit()
 
    """
    Find the two linux asset IDs
@@ -384,7 +459,12 @@ def main():
    s, headers = getToken(s)
    lin_raw = lin_asset_ids
    lin_data = json.dumps(lin_raw)
-   response = s.post(credentials_url + '/' + lin_cred_id + '/assets', headers=headers, data=lin_data)
+   try:
+      response = s.post(credentials_url + '/' + lin_cred_id + '/assets', headers=headers, data=lin_data)
+   except:
+      print colored ("Error: Cannot access " + credentials_url, "red")
+      print "RAW: " + response.text
+      exit()
 
 
    """
@@ -394,7 +474,12 @@ def main():
    s, headers = getToken(s)
    authScan_raw = {'uuid':group_id}
    authScan_data = json.dumps(authScan_raw)
-   response = s.post(authScan_url, headers=headers, data=authScan_data)
+   try:
+      response = s.post(authScan_url, headers=headers, data=authScan_data)
+   except:
+      print colored ("Error: Cannot access " + authScan_url, "red")
+      print "RAW: " + response.text
+      exit()
 
 
    print colored ("INFO: Script completed", "green")
