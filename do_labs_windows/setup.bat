@@ -1,5 +1,5 @@
 @echo off
-echo Make sure the folder C:\Users\Administrator\Desktop\scripts\reset exists
+if not exist "C:\Users\Administrator\Desktop\scripts\reset" mkdir C:\Users\Administrator\Desktop\scripts\reset
 timeout /t 5
 bitsadmin /transfer download_file /download /priority normal https://the.earth.li/~sgtatham/putty/latest/w32/plink.exe C:\Users\Administrator\Desktop\scripts\reset\plink.exe
 bitsadmin /transfer download_file /download /priority normal https://github.com/thesraid/REST/blob/master/do_labs_windows/PsExec.exe?raw=true C:\Users\Administrator\Desktop\scripts\reset\PsExec.exe
