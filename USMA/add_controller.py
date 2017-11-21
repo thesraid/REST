@@ -12,6 +12,7 @@ import json
 import urllib3
 import argparse
 import time
+import datetime
 import os
 from termcolor import colored
 
@@ -28,7 +29,8 @@ def get_args():
         description='Login Details and Controller password')
 
     parser.add_argument('-p', '--password',
-                        required=True,
+                        required=False,
+                        default='Password1!',
                         action='store',
                         help='Desired user password')
 
@@ -91,6 +93,13 @@ def main():
 
    # Write the results to a file in the current directory
    print colored ("INFO: Writing to results.txt", "green")
+   results_file = open('results.txt','a+')
+   results_file.write('=======================================================================\n')
+   today = str(datetime.date.today())
+   results_file.write(today)
+   results_file.write('		\n')
+   results_file.close()
+  
 
    for key in key_list:
 
@@ -120,6 +129,7 @@ def main():
          output = jsonSearch(response.json(), 'message')
          print colored ("      WAIT: " + output, "blue")
          if output == "Invalid Authentication Code":
+            print colored("ERROR: The above authentication code is not valid. Exiting...", "red")
             exit()
          if output != "node activated":
             time.sleep(120)
