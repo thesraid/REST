@@ -1,5 +1,5 @@
 #!/bin/bash
-wget https://s3.amazonaws.com/downloads.alienvault.cloud/usm-anywhere/sensor-images/usm-anywhere-sensor-aws-vpc.template
+wget -q https://s3.amazonaws.com/downloads.alienvault.cloud/usm-anywhere/sensor-images/usm-anywhere-sensor-aws-vpc.template -O ./usm-anywhere-sensor-aws-vpc.template
 x=1
 while [ $x -le $1 ]
 do
