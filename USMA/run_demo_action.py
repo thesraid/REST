@@ -3,7 +3,7 @@
 """
 joriordan@alienvault.com
 Script will login with the specified account and password
-Sensor will be configured
+Apps will be run
 
 """
 
