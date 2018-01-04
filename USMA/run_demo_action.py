@@ -2,7 +2,8 @@
 
 """
 joriordan@alienvault.com
-Script to create accounts on a controller and set the password
+Script will login with the specified account and password
+Sensor will be configured
 
 """
 
@@ -12,6 +13,7 @@ import urllib3
 import argparse
 import time
 from termcolor import colored
+from argparse import RawTextHelpFormatter
 
 
 # Disable SSL warnings
@@ -23,7 +25,8 @@ Get command line args from the user.
 """
 def get_args():
     parser = argparse.ArgumentParser(
-        description='Login Details and Controller domain')
+        description='Login Details and Controller domain',
+        formatter_class=RawTextHelpFormatter)
 
     parser.add_argument('-d', '--domain',
                         required=True,
@@ -42,12 +45,11 @@ def get_args():
                         action='store',
                         help='Password to use when connecting')
 
-    parser.add_argument('-n', '--names',
+    parser.add_argument('-a', '--actions',
                         nargs='+',
                         required=True,
-                        default='USMA-Sensor',
                         action='store',
-                        help='List of users to create')
+                        help='App Actions to run.\nValid choices are \n\tAWSEvents\n\tSpyCloudEvents\n\tOktaEvents\n\tSuricataEvents\n\tPaloAltoEvents\n\tAssets\n\tGSuiteEvents\n\tCiscoUmbrellaEvents\n\tOffice365Events\n\tVulnerabilities\n\tAzureEvents\n\tSyslogEvents\n\tConfigurationIssues')
 
     args = parser.parse_args()
 
@@ -101,23 +103,40 @@ def main():
 
    args = get_args()
 
+   global domain
    domain=args.domain
    user=args.user
    pwd=args.password
-   names_list=args.names
+   app_actions=args.actions
 
    """ Create a session - stores cookies """
    s = requests.Session()
 
-   """ Frequently used json and URLS """
-   data_raw = {"email":user, "password":pwd}
-   data = json.dumps(data_raw)
+   """ Frequently used vars, json and URLS """
+   name= "USMA-Sensor"
+   desc= "USMA Sensor"
    global users_url 
    users_url = 'https://' + domain + '/api/1.0/users'
    login_url = 'https://' + domain + '/api/1.0/login'
    sensors_url = 'https://' + domain + '/api/1.0/sensors'
    key_url = 'https://' + domain + '/api/1.0/sensors/key'
-
+   sensor_uuid_url = 'To be added later'
+   otx_url = 'https://' + domain + '/api/1.0/threatIntelligence/AlienvaultOTX'
+   assets_url = 'https://' + domain + '/api/1.0/assets'
+   assetGroups_url = 'https://' + domain + '/api/1.0/assetGroups'
+   assetDiscovery_url = 'https://' + domain + '/api/1.0/apps/nmap/assetDiscovery?sensorId='
+   scheduler_url = 'https://' + domain + '/api/1.0/scheduler'
+   status_url = 'https://' + domain + '/api/1.0/status'
+   authScan_url = 'https://' + domain + '/api/1.0/apps/joval/groupScan'
+   search_url = 'https://' + domain + '/api/1.0/search/aql'
+   credentials_url = 'https://' + domain + '/api/1.0/credentials'
+   pci_assets = ['192.168.250.13', '192.168.250.14', '192.168.250.17']
+   pci_asset_ids = []
+   pci_asset_objs = []
+   win_assets = ['192.168.250.14', '192.168.250.17']
+   win_asset_ids = []
+   lin_assets = ['192.168.250.13']
+   lin_asset_ids = []
 
    """
    Find the XSRF-TOKEN in the cookie
@@ -126,7 +145,9 @@ def main():
    s, headers = getToken(s)
 
    """ Login using the username, cookie and XSRF token """
-   print colored ("INFO: Logging into " + domain, "green")
+   print colored ("INFO: Logging in", "green")
+   data_raw = {"email":user, "password":pwd}
+   data = json.dumps(data_raw)
    try:
       response = s.post(login_url, headers=headers, data=data)
    except:
@@ -134,23 +155,57 @@ def main():
       print "RAW: " + response.text
       exit()
 
-   """ 
-   # Create the list of users
+
    """
-   print colored ("INFO: Creating the users", "green")
-   for name in names_list:
+   Get Sensor UUID
+   """
+   print colored ("INFO: Searching for sensor", "green")
+   s, headers = getToken(s)
+   try:
+      response = s.get(sensors_url, headers=headers, data=data)
+   except:
+      print colored ("Error: Cannot access " + sensors_url, "red")
+      print "RAW: " + response.text
+      exit()
+
+   """ 
+   Receive a list of details about sensors
+   Iterate through the list of objects to find one with the name of our sensor
+   Then pull out it's uuid
+   """
+   sensor_uuid = False
+   for obj in response.json():
+      if obj['name'] == name:
+         sensor_uuid = obj['uuid']
+   
+   if sensor_uuid: 
+      print colored ("INFO: Found sensor", "green")
+      sensor_uuid_url = 'https://' + domain + '/api/1.0/sensors/' + sensor_uuid
+   else:
+      print colored ("Error: Unable to find a sensor on " + domain, "red")
+      exit()
+   
+   """
+   Run demo app action
+   """
+   for action in app_actions:
+      print colored ("INFO: Running Demo App Action - " + action, "green")
+      app_raw = {"scenario":"All","scheduledJobId":""}
+      app_data = json.dumps(app_raw)
+      app_url = 'https://' + domain + '/api/1.0/apps/demo-app/demoAppActionCreate' + action + '?sensorId=' + sensor_uuid
       s, headers = getToken(s)
-      data_user = {"changePassword":"false","fullName":name,"email":name + "@alienvault.com","enabled":"true","roles":[{"name":"manager"}],'updatePassword':'true', 'password':pwd}
-      data = json.dumps(data_user)
       try:
-         print colored ("INFO: Creating the user " + name, "green")
-         response = s.post(users_url, headers=headers, data=data)
+         response = s.post(app_url, headers=headers, data=app_data)
       except:
-         print colored ("Error: Cannot access " + users_url, "red")
+         print colored ("Error: Cannot access " + app_url, "red")
          print "RAW: " + response.text
          exit()
 
-  
+
+
+   print colored ("INFO: Script completed", "green")
+
+
 ###########################################################################################
 
 """ Start program """
