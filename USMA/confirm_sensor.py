@@ -2,32 +2,31 @@
 
 """
 joriordan@alienvault.com
-Takes a list of conrollers and checks if the specified sensor exists and is configured
+Script will login with the specified account and password
+Sensor will be configured
+
 """
 
-import re
-import argparse
-import getpass
-import subprocess
-import os
+import requests
 import json
+import urllib3
+import argparse
 import time
-from os.path import expanduser
-#########################################################################################################
+from termcolor import colored
 
-"""
-Default global variables
-Any of these can be changed if required
-"""
 
+# Disable SSL warnings
+urllib3.disable_warnings()
+
+###########################################################################################
+"""
+Get command line args from the user.
+"""
 def get_args():
-    """Get command line args from the user.
-    """
     parser = argparse.ArgumentParser(
-        description='Sensor Key and Controller domain')
+        description='Login Details and Controller domain')
 
     parser.add_argument('-d', '--domain',
-                        nargs='+',
                         required=True,
                         #type=int,
                         #default=443,
@@ -44,12 +43,6 @@ def get_args():
                         action='store',
                         help='Password to use when connecting')
 
-    parser.add_argument('-n', '--name',
-                        required=False,
-                        default='USMA-Sensor-Prod',
-                        action='store',
-                        help='Sensor Name')
-
     args = parser.parse_args()
 
     if not args.password:
@@ -58,143 +51,183 @@ def get_args():
                    (args.domain, args.user))
     return args
 
-#########################################################################################################
-def runCommand(bashCommand):
+###########################################################################################
+""" 
+Find the XSRF-TOKEN in the cookie
+This has to be passed in the header of every future request
+"""
 
-   #print "Command: " + bashCommand
+def getToken(s):
+   s.get(users_url)
+   for name, value in s.cookies.items():
+     if name == 'XSRF-TOKEN':
+        token = value
+   headers = {'Content-Type': 'application/json','X-XSRF-TOKEN': token}
+   return s, headers
 
-   try: # Try and run the command, if it doesn't work then except subprocess will catch it and return 1 
-      output = subprocess.check_output(bashCommand, shell=True)
-      try: # Try and convert the output to a json object. If the output isn't json we get a ValueError so we return false. 
-         json_data = json.loads(output)
-         if 'error' in json_data: # If something goes wrong the json will have a key called error. Print it's contents and exit
-            print "Error: " + json_data['error']
+###########################################################################################
+"""
+Searches a json list for a particular key-value pair
+Exits if the response contains an error key
+"""
+
+def jsonSearch(response, searchString):
+   try:
+      for obj, value in response.json().items():
+         if obj == "error":
+            print colored ("ERROR: " + (response.json()['error']), 'red')
+            print "Raw Log: " + response.text
             exit()
          else:
-            return json_data, output
-      except ValueError, e:
-         return False, output
-   except subprocess.CalledProcessError as bashError:         
-      print "Error: Error while executing bash command"
-      print "Error: " + bashCommand                                                                                          
-      print "Error: Code", bashError.returncode, bashError.output
+            key = (response.json()[searchString])
+   except KeyError:
+      print colored ("ERROR: " + response.text, "red")
       exit()
 
+   return key
 
-#########################################################################################################
 
-def login(domain, user, pwd, home):
+###########################################################################################
+"""
+Get the ids of the assets in the supplied list
+"""
+def getAssetIDs(s, assetNamesList):
 
-   #Get Cookie
+   search_url = 'https://' + domain + '/api/1.0/search/aql'
+   asset_ids = []
+
+   search_raw = {'define':{'a':{'type':'Asset'},'g':{'type':'AssetGroup','join':'a','relationship':'AssetMemberOfAssetGroup','fromLeft':'true'},'s':{'type':'Service','join':'a','relationship':'AssetHasService','fromLeft':'true'},'c':{'type':'CPEItem','join':'a','relationship':'AssetHasCPEItem','fromLeft':'true'}},'where':[{'and':{'==':{'a.knownAsset':'true'}}}],'return':{'assets':{'object':'a','page':{'start':0,'count':20},'inject':{'AssetHasNetworkInterface':{'relationship':'AssetHasNetworkInterface','fromLeft':'true','inject':{'NetworkInterfaceHasHostname':{'relationship':'NetworkInterfaceHasHostname','fromLeft':'true'}}},'AssetHasCredentials':{'relationship':'AssetHasCredentials','fromLeft':'true'}},'sort':['a.dateUpdated desc']},'agg_operatingSystem':{'aggregation':'a.operatingSystem','sort':['count desc','value asc']},'agg_deviceType':{'aggregation':'a.deviceType','sort':['count desc','value asc']},'agg_assetOriginType':{'aggregation':'a.assetOriginType','sort':['count desc','value asc']},'agg_AssetMemberOfAssetGroup':{'aggregation':'g.id','sort':['count desc','value asc']},'agg_assetService':{'aggregation':'s.data','sort':['count desc','value asc']},'agg_assetSoftware':{'aggregation':'c.name','sort':['count desc','value asc']},'agg_assetOriginUUID':{'aggregation':'a.assetOriginUUID','sort':['count desc','value asc']}}}
+   search_data = json.dumps(search_raw)
+   s, headers = getToken(s)
    try:
-      print "Info: Securely connecting to " + domain + " to get certificates and cookies"
-      print " "
-      print " "
-      bashCommand = 'curl -v -s -k -X GET -H "Content-Type: application/json" "https://' + domain + '/api/1.0/user" -b ' + home + '/.sensor/cookie.txt -c ' + home + '/.sensor/cookie.txt'
-      output = subprocess.check_output(bashCommand, shell=True)   
-      print " "
-      print " "
-      print "Info: Successfully got certificates and a cookie" 
-   except subprocess.CalledProcessError as bashError:
-      print "Error: Error while executing bash command"
-      print "Error: " + bashCommand
-      print "Error: Code", bashError.returncode, bashError.output
+      response = s.post(search_url, headers=headers, data=search_data)
+   except:
+      print colored ("Error: Cannot access " + search_url, "red")
+      print "RAW: " + response.text
       exit()
 
-   # Extract XSRF-TOKEN from cookie. This will be needed for subsequent API calls
-   # https://stackoverflow.com/questions/10477294/how-do-i-search-for-a-pattern-within-a-text-file-using-python-combining-regex
-   regex = re.compile("XSRF-TOKEN\s+(\S+)")
-   for i, line in enumerate(open(home + '/.sensor/cookie.txt')):
-      for match in re.finditer(regex, line):
-          token = match.group(1)
+   for asset in assetNamesList:
+      for obj in response.json()['assets']['results']:
+         if obj['name'] == asset:
+            print colored ("      INFO: Found " + asset, "green")
+            asset_ids.append(obj["id"])
 
-   # Login
-   try:
-      print "Info: Logging into " + domain + " as " + user
-      bashCommand = 'curl -s -k -X POST -H \'Content-Type: application/json\' -H "X-XSRF-TOKEN: ' + token + '" -d \'{"email":"' + user + '", "password":"' + pwd + '"}\' "https://' + domain + '/api/1.0/login" -b ' + home + '/.sensor/cookie.txt -c ' + home + '/.sensor/cookie.txt'
-      #print bashCommand
-      print "Info: Successfully logged into " + domain
-      output = subprocess.check_output(bashCommand, shell=True)
-      #print output
-   except subprocess.CalledProcessError as bashError:
-      print "Error: Error while executing bash command"
-      print "Error: " + bashCommand
-      print "Error: Code", bashError.returncode, bashError.output
-      exit()
+   return asset_ids
 
-   return token
-
-#########################################################################################################
-def findJSONKey(bashCommand, search_key, search_string, key):
-
-   obj_string = "NOT FOUND"
-   
-   json_data, output = runCommand(bashCommand)  
-   
-   if not json_data:
-      print "Error: Didn't receive json output"
-      exit()
-   else:
-      for obj in json_data:
-         if obj[search_key] == search_string:
-            print "Info: The " + search_key + " with the value " + search_string + " has a " + key + " with a value of " + obj[key]
-            obj_string = obj[key]
-
-   return obj_string
-
-#########################################################################################################
+###########################################################################################
+"""
+Main module
+"""
 def main():
 
    args = get_args()
 
-   domain_list=args.domain
+   global domain
+   domain=args.domain
    user=args.user
    pwd=args.password
-   name=args.name
 
-   # Write the results to a file in the current directory
-   sensors_file = open('Confirm_Sensors.txt','w+')
-   sensors_file.write('SENSOR RESULTS\n')
-   sensors_file.write('--------------\n')
+   """ Create a session - stores cookies """
+   s = requests.Session()
+
+   """ Frequently used vars, json and URLS """
+   name= "USMA-Sensor"
+   desc= "USMA Sensor"
+   global users_url 
+   users_url = 'https://' + domain + '/api/1.0/users'
+   login_url = 'https://' + domain + '/api/1.0/login'
+   sensors_url = 'https://' + domain + '/api/1.0/sensors'
+   key_url = 'https://' + domain + '/api/1.0/sensors/key'
+   sensor_uuid_url = 'To be added later'
+   otx_url = 'https://' + domain + '/api/1.0/threatIntelligence/AlienvaultOTX'
+   assets_url = 'https://' + domain + '/api/1.0/assets'
+   assetGroups_url = 'https://' + domain + '/api/1.0/assetGroups'
+   assetDiscovery_url = 'https://' + domain + '/api/1.0/apps/nmap/assetDiscovery?sensorId='
+   scheduler_url = 'https://' + domain + '/api/1.0/scheduler'
+   status_url = 'https://' + domain + '/api/1.0/status'
+   authScan_url = 'https://' + domain + '/api/1.0/apps/joval/groupScan'
+   search_url = 'https://' + domain + '/api/1.0/search/aql'
+   credentials_url = 'https://' + domain + '/api/1.0/credentials'
+   pci_assets = ['192.168.250.13', '192.168.250.14', '192.168.250.17']
+   pci_asset_ids = []
+   pci_asset_objs = []
+   win_assets = ['192.168.250.14', '192.168.250.17']
+   win_asset_ids = []
+   lin_assets = ['192.168.250.13']
+   lin_asset_ids = []
+
+   """
+   Find the XSRF-TOKEN in the cookie
+   This has to be passed in the header of every future request
+   """
+   s, headers = getToken(s)
+
+   """ Login using the username, cookie and XSRF token """
+   #print colored ("INFO: Logging in", "green")
+   data_raw = {"email":user, "password":pwd}
+   data = json.dumps(data_raw)
+   try:
+      response = s.post(login_url, headers=headers, data=data)
+   except:
+      print colored ("Error: Cannot access " + login_url, "red")
+      print "RAW: " + response.text
+      exit()
+
+
+   """
+   Get Sensor UUID
+   """
+   #print colored ("INFO: Searching for sensor", "green")
+   s, headers = getToken(s)
+   try:
+      response = s.get(sensors_url, headers=headers, data=data)
+   except:
+      print colored ("Error: Cannot access " + sensors_url, "red")
+      print "RAW: " + response.text
+      exit()
+
+   """ 
+   Receive a list of details about sensors
+   Iterate through the list of objects to find one with the name of our sensor
+   Then pull out it's uuid
+   """
+   sensor_uuid = False
+   for obj in response.json():
+      if obj['name'] == name:
+         sensor_uuid = obj['uuid']
    
-   for domain in domain_list:
-      # Make a directory in the users home to store cookies and other temp files
-      home = expanduser("~")
-      if not os.path.exists(home + '/.sensor'):
-         os.makedirs(home + '/.sensor')
+   if sensor_uuid: 
+      #print colored ("INFO: Found sensor", "green")
+      sensor_uuid_url = 'https://' + domain + '/api/1.0/sensors/' + sensor_uuid
+   else:
+      print colored ("Error: Unable to find a sensor on " + domain, "red")
+      exit()
 
-      # Remove any old cookie as it's no longer needed
-      bashCommand = 'touch ' + home + '/.sensor/cookie.txt;rm ' + home + '/.sensor/cookie.txt'
-      json_data, output = runCommand(bashCommand)
 
-      # Login to the controller and get a token
-      token = login(domain, user, pwd, home)
+   """
+   Get sensor status
+   """
+   data_raw = {"email":user, "password":pwd}
+   data = json.dumps(data_raw)
+   s, headers = getToken(s)
+   try:
+      response = s.get(sensor_uuid_url, headers=headers, data=data)
+   except:
+      print colored ("Error: Cannot access " + sensor_uuid_url, "red")
+      #print "RAW: " + response.text
+      exit()
 
-      # Curl command for getting a list of sensors
-      bashCommand = 'curl -s -k -X GET -H \'Content-Type: application/json\' -H "X-XSRF-TOKEN: ' + token + '" -d \'{"email":"' + user + '", "password":"' + pwd + '"}\' "https://' + domain + '/api/1.0/sensors" -b ' + home + '/.sensor/cookie.txt -c ' + home + '/.sensor/cookie.txt'
-      # Run the above command
-      # Find the UUID for the sensor
-      sensor_uuid = findJSONKey(bashCommand, 'name', name, 'uuid')
+   result = jsonSearch(response, 'setupStatus')
+   if result == 'Complete':
+      print colored ("INFO: Sensor configured on " + domain, "green")
+   else:
+      print colored ("ERROR: Sensor not configured on " + domain, "red")
+      print colored ("Status returned is", "red")
+      print result
 
-      # Confirm system is marked as configured
-      # Curl command for getting a list of sensors
-      bashCommand = 'curl -s -k -X GET -H \'Content-Type: application/json\' -H "X-XSRF-TOKEN: ' + token + '" -d \'{"email":"' + user + '", "password":"' + pwd + '"}\' "https://' + domain + '/api/1.0/sensors" -b ' + home + '/.sensor/cookie.txt -c ' + home + '/.sensor/cookie.txt'
-      # Run the above command
-      # Find the setup status for the sensor
-      sensor_status = findJSONKey(bashCommand, 'name', name, 'setupStatus')
-      print "Info: sensor status is " + sensor_status
-      sensors_file.write(domain + " : " + name + " : " + sensor_status + "\n")
 
-      # Remove the cookie as it's no longer needed
-      bashCommand = 'rm ' + home + '/.sensor/cookie.txt'
-      json_data, output = runCommand(bashCommand)
+###########################################################################################
 
-   sensors_file.close()
-
-#########################################################################################################
-
-# Start program
+""" Start program """
 if __name__ == "__main__":
     main()
-
-#########################################################################################################
