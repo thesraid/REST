@@ -11,7 +11,7 @@ wget -q https://s3.amazonaws.com/downloads.alienvault.cloud/usm-anywhere/sensor-
 x=1
 while [ $x -le $1 ]
 do
-  #aws cloudformation deploy --template-file usm-anywhere-sensor-aws-vpc.template --stack-name "${2}-${x}" --parameter-overrides KeyName=JohnO VpcId=vpc-198db97d NodeName="${2}-${x}" SubnetId=subnet-426c2a1a --capabilities CAPABILITY_IAM
+  aws cloudformation deploy --template-file usm-anywhere-sensor-aws-vpc.template --stack-name "${2}-${x}" --parameter-overrides KeyName=JohnO VpcId=vpc-198db97d NodeName="${2}-${x}" SubnetId=subnet-426c2a1a --capabilities CAPABILITY_IAM
   sleep 5
   echo "The instance has been deployed and it's IP address is"
   ip=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=${2}-${x}" --query "Reservations[*].Instances[*].NetworkInterfaces[*].Association.PublicIp" --output text)
