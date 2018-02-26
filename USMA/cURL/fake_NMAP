@@ -1,0 +1,46 @@
+#!/bin/bash
+# This script emulates an nmap scan against the IP 192.168.250.14 on USM Anywhere with the internal Demo App installed.
+# nmap -e eth0 -Pn -S 46.4.123.15 192.168.250.14
+# joriordan@alienvault.com
+
+echo "Starting Nmap scan at $(date)"
+echo " "
+# echo "Info: Testing connectivity to $1"
+if curl -sSf $1
+then
+        #echo "Info: Securely connecting to $1 to get certificates and cookies"
+        curl -v -s -k -X GET -H "Content-Type: application/json" "https://$1/api/1.0/user" -b .cookie.txt -c .cookie.txt >/dev/null 2>/dev/null
+        token="$(grep -oP 'XSRF-TOKEN\s+(\S+)' .cookie.txt | cut -c 12-)"
+        #echo "Info: Logging into $1"
+        curl -s -k -X POST -H 'Content-Type: application/json' -H "X-XSRF-TOKEN: $token" -d '{"email":"usm-anywhere-training@alienvault.com", "password":"$2"}' "https://$1/api/1.0/login" -b .cookie.txt -c .cookie.txt >/dev/null 2>/dev/null
+        token="$(grep -oP 'XSRF-TOKEN\s+(\S+)' .cookie.txt | cut -c 12-)"
+        #echo "Info: Getting sensor ID"
+        sensor="$(curl -s -k -X GET -H 'Content-Type: application/json' -H "X-XSRF-TOKEN: $token" -d '{"email":"usm-anywhere-training@alienvault.com", "password":"$2"}' "https://$1/api/1.0/sensors" -b .cookie.txt -c .cookie.txt | grep -oP 'sensorId":"[a-z0-9\-]+' | head -1 | cut -c 12-)"
+        #echo "Info: Sensor ID is $sensor"
+        token="$(grep -oP 'XSRF-TOKEN\s+(\S+)' .cookie.txt | cut -c 12-)"
+        curl -s -k -X POST -H 'Content-Type: application/json' -H "X-XSRF-TOKEN: $token" -d '{"loadScenario":"External NMAP Scan","scheduledJobId":""}' "https://$1/api/1.0/apps/demo-app/demoAppActionCreateSuricataEvents?sensorId=$sensor" -b .cookie.txt -c .cookie.txt >/dev/null 2>/dev/null
+        #echo "Info: Creating Events"
+        echo "Nmap scan report for windows2012 (192.168.250.14)"
+        echo "Host is up (0.00038s latency)."
+        echo "Not shown: 988 closed ports"
+        echo " "
+        echo "PORT      STATE SERVICE"
+        echo "80/tcp    open  http"
+        echo "135/tcp   open  msrpc"
+        echo "139/tcp   open  netbios-ssn"
+        echo "445/tcp   open  microsoft-ds"
+        echo "3389/tcp  open  ms-wbt-server"
+        echo "49152/tcp open  unknown"
+        echo "49153/tcp open  unknown"
+        echo "49154/tcp open  unknown"
+        echo "49155/tcp open  unknown"
+        echo "49158/tcp open  unknown"
+        echo "49159/tcp open  unknown"
+        echo "49160/tcp open  unknown"
+        echo " "
+        echo "Nmap done: 1 IP address (1 host up) scanned in 5.87 seconds"
+        echo " "
+else
+        echo "ERROR: Could not access $1"
+        exit 1
+fi
