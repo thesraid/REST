@@ -9,7 +9,6 @@ echo You can also connect to https://%domain%/#/settings/deployment/sensors to s
 plink.exe root@192.168.250.13 -pw Password1! /root/scripts/resetScripts/add_sensor.py -s 192.168.250.18 -d %domain% -u usm-anywhere-training@alienvault.com -p Password1!
 REM echo You can ignore any windows warnings above saying that alienvault.com cannot be found
 echo Sensor added ... Waiting 20 seconds before configuring
-sleep 20
 echo You will see no output below until the Asset Scan is complete
 echo You can connect to https://%domain%/#/asset-groups to see the Scan taking place
 echo View the Scan History of USMA-Sensor-Network to view progress
