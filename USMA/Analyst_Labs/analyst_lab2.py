@@ -131,8 +131,8 @@ def main():
    s = requests.Session()
 
    """ Frequently used vars, json and URLS """
-   name= "USMA-Sensor"
-   desc= "USMA Sensor"
+   name= "USMA-Sensor-Prod"
+   desc= "USMA Sensor Prod"
    global users_url 
    users_url = 'https://' + domain + '/api/1.0/users'
    login_url = 'https://' + domain + '/api/1.0/login'
