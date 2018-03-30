@@ -1,5 +1,7 @@
 @echo off
 REM joriordan@alienvault.com
+echo Enter the Fully Qualified Domain name (not URL)
+echo Example: training-eu-1-20170101.alienvault.cloud
 set /p domain=Enter Domain: 
 echo You will see no output below until the sensor is added
 echo You can connect to http://192.168.250.18 to view the progress
