@@ -40,6 +40,12 @@ def get_args():
                         action='store',
                         help='Controller Keys seperated by spaces')
 
+    parser.add_argument('-u', '--user',
+                        required=False,
+                        action='store',
+                        help='Additional users name in email format')
+
+
     args = parser.parse_args()
 
     return args
@@ -74,7 +80,8 @@ def jsonSearch(response, searchString):
          else:
             key = (response[searchString])
    except KeyError:
-      key = jsonSearch(response, 'error')
+      print colored ("ERROR: " + (response['error']), "red")
+      print "RAW:", response
       exit()
 
    return key
@@ -90,6 +97,7 @@ def main():
 
    pwd=args.password
    key_list=args.key
+   name=args.user
 
    # Write the results to a file in the current directory
    print colored ("INFO: Writing to results.txt", "green")
@@ -123,6 +131,17 @@ def main():
       """
    
       output = "activation in progress"
+
+      # Check to see if it's already activated
+      response = s.post(lic_url, headers=lic_head, data=key_json, verify=False)
+      output = jsonSearch(response.json(), 'message')
+      if output == "node activated":
+         print colored("WARN: Node is already activated", "yellow")
+         connection = jsonSearch(response.json(), 'connection')
+         controller = "https://" + jsonSearch(connection, 'masterNode')
+         print colored("WARN: " +  controller, "yellow")
+         continue
+
    
       while output != "node activated":
          response = s.post(lic_url, headers=lic_head, data=key_json, verify=False)
@@ -220,8 +239,33 @@ def main():
       result = jsonSearch(response.json(),'result')
       print colored ("INFO: Result - " + result, "green")
 
-      results_file.write('KEY: ' + key + '       URL: ' + controller + '       USER: ' + inital_user + '       OLDPASS: ' + inital_pass + '       PASS: ' + pwd + '\n')
-      results_file.close()
+
+      """
+      # Create the list of users
+      """
+
+      if name is not None:
+         print colored ("INFO: Creating the second user", "green")
+         s, headers = getToken(s)
+         data_user = {"changePassword":"false","fullName":name,"email":name,"enabled":"true","roles":[{"name":"manager"}],'updatePassword':'true', 'password':pwd}
+         data = json.dumps(data_user)
+         try:
+            response = s.post(users_url, headers=headers, data=data)
+         except:
+            print colored ("Error: Cannot access " + users_url, "red")
+            print "RAW: " + response.text
+            exit()
+     
+         result = jsonSearch(response.json(),'fullName')
+         print colored ("INFO: " + result + " created", "green")
+
+
+      if name is not None:
+         results_file.write('KEY: ' + key + '       URL: ' + controller + '       USER: ' + inital_user + '       OLDPASS: ' + inital_pass + '       PASS: ' + pwd + '       XTRAUSR: ' + name + '\n')
+         results_file.close()
+      else:
+         results_file.write('KEY: ' + key + '       URL: ' + controller + '       USER: ' + inital_user + '       OLDPASS: ' + inital_pass + '       PASS: ' + pwd + '\n')
+         results_file.close()
  
   
 ###########################################################################################
