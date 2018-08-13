@@ -3,7 +3,7 @@
 
 """
 joriordan@alienvault.com
-Script to crreate a controller and reset the password
+Script to create a controller and reset the password
 
 """
 
