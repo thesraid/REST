@@ -1,5 +1,9 @@
 @echo off
 REM joriordan@alienvault.com
+echo In order for this script to work you need to PuTTY to Linux at least one
+echo Use PuTTY on the Desktop to connect to Linux now.
+echo You do not need to log in. You can immeditely close the window
+pause
 echo Enter the Fully Qualified Domain name (not URL)
 echo Example: training-eu-1-20170101.alienvault.cloud
 set /p domain=Enter Domain: 
