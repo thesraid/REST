@@ -1,9 +1,7 @@
 @echo off
 REM joriordan@alienvault.com
-echo In order for this script to work you need to PuTTY to Linux at least one
-echo Use PuTTY on the Desktop to connect to Linux now.
-echo You do not need to log in. You can immeditely close the window
-pause
+echo Adding and configuring the sensor on USM Anywhere and performing asset scans
+timeout /t 5
 echo Enter the Fully Qualified Domain name (not URL)
 echo Example: training-eu-1-20170101.alienvault.cloud
 set /p domain=Enter Domain: 
@@ -17,4 +15,5 @@ echo You will see no output below until the Asset Scan is complete
 echo You can connect to https://%domain%/#/asset-groups to see the Scan taking place
 echo View the Scan History of USMA-Sensor-Network to view progress
 plink.exe root@192.168.250.13 -pw Password1! /root/scripts/resetScripts/analyst_lab1.py -d %domain% -u usm-anywhere-training@alienvault.com -p Password1! -o 3e7fd931d2459ad2d0de1ea5c1edcc3ecb73fe265641ae82120edf5e74bb80cd
+echo Script complete
 pause
