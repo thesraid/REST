@@ -1,4 +1,8 @@
 @echo off
+echo In order for this and subsequents script to work you need to PuTTY to Linux at least one
+echo Use PuTTY on the Desktop to connect to Linux now.
+echo You do not need to log in. You can immeditely close the window
+pause
 if not exist "C:\Users\Administrator\Desktop\scripts\reset" mkdir C:\Users\Administrator\Desktop\scripts\reset
 bitsadmin /transfer download_file /download /priority normal https://the.earth.li/~sgtatham/putty/latest/w32/plink.exe C:\Users\Administrator\Desktop\scripts\reset\plink.exe
 bitsadmin /transfer download_file /download /priority normal https://github.com/thesraid/REST/blob/master/do_labs_windows/PsExec.exe?raw=true C:\Users\Administrator\Desktop\scripts\reset\PsExec.exe
