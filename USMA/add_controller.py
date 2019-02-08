@@ -3,8 +3,12 @@
 
 """
 joriordan@alienvault.com
-Script to create a controller and reset the password
+Script to crreate a controller and reset the password
 
+Modified 2018-05-11 jwalsh@alienvault.com added outputfile option
+    Use -o or --outputfile
+    Defaults to results.txt
+    Allows multiple instances to run in parallel writing to different files
 """
 
 import requests
@@ -44,6 +48,12 @@ def get_args():
                         required=False,
                         action='store',
                         help='Additional users name in email format')
+
+    parser.add_argument('-o', '--outputfile',
+                        required=False,
+                        default="results.txt",
+                        action='store',
+                        help='Name of output file where results are written')
 
 
     args = parser.parse_args()
@@ -98,10 +108,11 @@ def main():
    pwd=args.password
    key_list=args.key
    name=args.user
+   outputfile=args.outputfile
 
    # Write the results to a file in the current directory
-   print colored ("INFO: Writing to results.txt", "green")
-   results_file = open('results.txt','a+')
+   print colored ("INFO: Writing to " + outputfile, "green")
+   results_file = open(outputfile, 'a+')
    results_file.write('=======================================================================\n')
    today = str(datetime.date.today())
    results_file.write(today)
@@ -111,7 +122,7 @@ def main():
 
    for key in key_list:
 
-      results_file = open('results.txt','a+')
+      results_file = open(outputfile,'a+')
       
       print " "
       print colored ("INFO: Key - " + key, "green")
@@ -133,8 +144,19 @@ def main():
       output = "activation in progress"
 
       # Check to see if it's already activated
-      response = s.post(lic_url, headers=lic_head, data=key_json, verify=False)
-      output = jsonSearch(response.json(), 'message')
+      try:
+         response = s.post(lic_url, headers=lic_head, data=key_json, verify=False)
+      except:
+         print "      WARNING: Timed out connecting to update.alienvault.cloud"
+         time.sleep(5)
+
+      try:
+         response
+      except NameError:
+         print "."
+      else:
+         output = jsonSearch(response.json(), 'message')
+
       if output == "node activated":
          print colored("WARN: Node is already activated", "yellow")
          connection = jsonSearch(response.json(), 'connection')
@@ -142,16 +164,36 @@ def main():
          print colored("WARN: " +  controller, "yellow")
          continue
 
-   
-      while output != "node activated":
-         response = s.post(lic_url, headers=lic_head, data=key_json, verify=False)
-         output = jsonSearch(response.json(), 'message')
-         print colored ("      WAIT: " + output, "blue")
+  
+      tries = 0 
+      while (output != "node activated") and (tries < 10):
+         try:
+            response = s.post(lic_url, headers=lic_head, data=key_json, verify=False)
+         except:
+            print "      WARNING: Timed out connecting to update.alienvault.cloud"
+            time.sleep(5)
+
+         try:
+            response
+         except NameError:
+            print "."
+         else:
+            output = jsonSearch(response.json(), 'message')
+
+         print colored (str(tries) + "      WAIT: " + output, "blue")
          if output == "Invalid Authentication Code":
             print colored("ERROR: The above authentication code is not valid. Exiting...", "red")
             exit()
          if output != "node activated":
             time.sleep(120)
+
+         tries += 1
+
+      if tries == 10:
+         print colored("********************************", "yellow")
+         print colored("ERROR: Unable to reconnect to controller. Controller may be up. Manual password reset from controller webpage required", "yellow")
+         print colored("********************************", "yellow")
+         break
    
       connection = jsonSearch(response.json(), 'connection')
       inital_pass = jsonSearch(connection, 'initialPassword') 
@@ -159,8 +201,8 @@ def main():
       controller = "https://" + jsonSearch(connection, 'masterNode') 
    
    
-      print colored ("INFO: Inital Password - " + inital_pass, "green")
-      print colored ("INFO: Inital User     - " + inital_user, "green")
+      print colored ("INFO: Initial Password - " + inital_pass, "green")
+      print colored ("INFO: Initial User     - " + inital_user, "green")
       print colored ("INFO: Controller      - " + controller, "green")
    
       login_url = controller + '/api/1.0/login'
