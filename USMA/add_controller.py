@@ -9,6 +9,9 @@ Modified 2018-05-11 jwalsh@alienvault.com added outputfile option
     Use -o or --outputfile
     Defaults to results.txt
     Allows multiple instances to run in parallel writing to different files
+
+Modified 2019-07-01 joriordan@alienvault.com added controller URL log
+    Allows controllerWatchdog to check if controller is up or down
 """
 
 import requests
@@ -118,7 +121,6 @@ def main():
    results_file.write(today)
    results_file.write('		\n')
    results_file.close()
-  
 
    for key in key_list:
 
@@ -308,6 +310,11 @@ def main():
       else:
          results_file.write('KEY: ' + key + '       URL: ' + controller + '       USER: ' + inital_user + '       OLDPASS: ' + inital_pass + '       PASS: ' + pwd + '\n')
          results_file.close()
+
+
+      controllers_file = open('/var/log/controllers.log', 'a+')
+      controllers_file.write(controller + '\n')
+      controllers_file.close()
  
   
 ###########################################################################################
