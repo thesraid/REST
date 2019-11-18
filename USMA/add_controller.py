@@ -4,14 +4,6 @@
 """
 joriordan@alienvault.com
 Script to crreate a controller and reset the password
-
-Modified 2018-05-11 jwalsh@alienvault.com added outputfile option
-    Use -o or --outputfile
-    Defaults to results.txt
-    Allows multiple instances to run in parallel writing to different files
-
-Modified 2019-07-01 joriordan@alienvault.com added controller URL log
-    Allows controllerWatchdog to check if controller is up or down
 """
 
 import requests
@@ -148,16 +140,18 @@ def main():
       # Check to see if it's already activated
       try:
          response = s.post(lic_url, headers=lic_head, data=key_json, verify=False)
+         output = jsonSearch(response.json(), 'message')
       except:
          print "      WARNING: Timed out connecting to update.alienvault.cloud"
-         time.sleep(5)
+         # time.sleep(5)
 
-      try:
-         response
-      except NameError:
-         print "."
-      else:
-         output = jsonSearch(response.json(), 'message')
+      #try:
+      #   response
+      #except NameError:
+      #   print "."
+      #else:
+      #   output = jsonSearch(response.json(), 'message')
+      
 
       if output == "node activated":
          print colored("WARN: Node is already activated", "yellow")
@@ -206,11 +200,17 @@ def main():
       print colored ("INFO: Initial Password - " + inital_pass, "green")
       print colored ("INFO: Initial User     - " + inital_user, "green")
       print colored ("INFO: Controller      - " + controller, "green")
+
+      """ Figure out the API Version and set the URLS below accordingly """
+      api_url = controller + '/api/version'
+      response = s.get(api_url)
+      api = response.json()['apiVersion']
+      #print "Login RAW: " + response.text
    
-      login_url = controller + '/api/1.0/login'
-      user_url = controller + '/api/1.0/user'
-      users_url = controller + '/api/1.0/users'
-      userme_url = controller + '/api/1.0/users/me'
+      login_url = controller + '/api/' + api + '/login'
+      user_url = controller + '/api/' + api + '/user'
+      users_url = controller + '/api/' + api + '/users'
+      userme_url = controller + '/api/' + api + '/users/me'
    
       """
       Find the XSRF-TOKEN in the cookie
@@ -224,65 +224,111 @@ def main():
       print colored ("INFO: Logging in", "green")
       try:
          response = s.post(login_url, headers=headers, data=data)
-      except:
-         print response.text
-         exit()
-   
-      """ Get the user ID """
-      data_raw = {'email':inital_user, 'password':inital_pass}
-      data = json.dumps(data_raw)
-      print colored ("INFO: Getting User Info", "green")
-      try:
-         response = s.get(user_url, headers=headers, data=data)
+         print colored ("INFO: Logged in", "green")
       except:
          print response.text
          exit()
 
-      loginAttempts = jsonSearch(response.json(),'loginAttempts')
-      blockedTimestamp = jsonSearch(response.json(),'blockedTimestamp')
-      emailOptin = jsonSearch(response.json(),'emailOptin')
-      changePassword = jsonSearch(response.json(),'changePassword')
-      intercomHash = jsonSearch(response.json(),'intercomHash')
-      licenseKey = jsonSearch(response.json(),'licenseKey')
-      wizard = jsonSearch(response.json(),'wizard')
-      id_ = jsonSearch(response.json(),'id')
-      email = jsonSearch(response.json(),'email')
-      multiFactorAuthentication = jsonSearch(response.json(),'multiFactorAuthentication')
-      timestamp = jsonSearch(response.json(),'timestamp')
+
+      """ Start of change password block """   
+      if api == "1.0":
+         """ Get the user ID """
+         data_raw = {'email':inital_user, 'password':inital_pass}
+         data = json.dumps(data_raw)
+         print colored ("INFO: Getting User Info", "green")
+         try:
+            response = s.get(user_url, headers=headers, data=data)
+         except:
+            print response.text
+            exit()
+
+         loginAttempts = jsonSearch(response.json(),'loginAttempts')
+         blockedTimestamp = jsonSearch(response.json(),'blockedTimestamp')
+         emailOptin = jsonSearch(response.json(),'emailOptin')
+         changePassword = jsonSearch(response.json(),'changePassword')
+         intercomHash = jsonSearch(response.json(),'intercomHash')
+         licenseKey = jsonSearch(response.json(),'licenseKey')
+         wizard = jsonSearch(response.json(),'wizard')
+         id_ = jsonSearch(response.json(),'id')
+         email = jsonSearch(response.json(),'email')
+         multiFactorAuthentication = jsonSearch(response.json(),'multiFactorAuthentication')
+         timestamp = jsonSearch(response.json(),'timestamp')
      
-      """
-      print "DUMP:" 
-      print loginAttempts
-      print blockedTimestamp
-      print emailOptin
-      print changePassword
-      print intercomHash
-      print licenseKey
-      print wizard
-      print id_
-      print email
-      print multiFactorAuthentication
-      print timestamp
-      print inital_pass
-      print 'True'
-      print pwd
-      print userme_url
-      """
+         """
+         print "DUMP:" 
+         print loginAttempts
+         print blockedTimestamp
+         print emailOptin
+         print changePassword
+         print intercomHash
+         print licenseKey
+         print wizard
+         print id_
+         print email
+         print multiFactorAuthentication
+         print timestamp
+         print inital_pass
+         print 'True'
+         print pwd
+         print userme_url
+         """
    
-      """ Change password """
-      s, headers = getToken(s)
-      data_raw = {'loginAttempts':loginAttempts, 'blockedTimestamp':blockedTimestamp, 'emailOptin':emailOptin, 'changePassword': changePassword, 'intercomHash':intercomHash, 'licenseKey':licenseKey, 'id':id_, 'email':email, 'multiFactorAuthentication':multiFactorAuthentication, 'timestamp':timestamp, 'currentUserPassword':inital_pass, 'updatePassword':'true', 'password':pwd}
-      data = json.dumps(data_raw)
-      print colored ("INFO: Changing password", "green")
-      try:
-         response = s.put(userme_url, headers=headers, data=data)
-      except:
-         print response.text
-         exit()
+         """ Change password """
+         s, headers = getToken(s)
+         data_raw = {'loginAttempts':loginAttempts, 'blockedTimestamp':blockedTimestamp, 'emailOptin':emailOptin, 'changePassword': changePassword, 'intercomHash':intercomHash, 'licenseKey':licenseKey, 'id':id_, 'email':email, 'multiFactorAuthentication':multiFactorAuthentication, 'timestamp':timestamp, 'currentUserPassword':inital_pass, 'updatePassword':'true', 'password':pwd}
+         data = json.dumps(data_raw)
+         print colored ("INFO: Changing password", "green")
+         try:
+            response = s.put(userme_url, headers=headers, data=data)
+         except:
+            print response.text
+            exit()
 
-      result = jsonSearch(response.json(),'result')
-      print colored ("INFO: Result - " + result, "green")
+         result = jsonSearch(response.json(),'result')
+         print colored ("INFO: Result - " + result, "green")
+      
+      elif api == "2.0":
 
+         """ Get the user ID """
+         data_raw = {'email':inital_user, 'password':inital_pass}
+         data = json.dumps(data_raw)
+         print colored ("INFO: Getting User Info", "green")
+         try:
+            response = s.get(userme_url, headers=headers, data=data)
+         except:
+            print response.text
+            exit()
+
+         userId = jsonSearch(response.json(),'id')
+         #print "ID: " + userId
+
+         password_url = controller + '/api/' + api + '/users/' + userId + '/password'
+         """ Change password """
+         s, headers = getToken(s)
+         data_raw = {'currentPassword':inital_pass, 'password':pwd}
+         data = json.dumps(data_raw)
+         print colored ("INFO: Changing password", "green")
+         try:
+            response = s.put(password_url, headers=headers, data=data)
+         except:
+            print response.text
+            exit()
+
+         try:
+            result = jsonSearch(response.json(),'error')
+            print colored ("ERROR: " + result, "red")
+            exit()
+         except:
+            if '"' + userId + '"' == response.text:
+               print colored ("INFO: Password changed to " + pwd, "green")
+            else:
+               print colored ("ERROR: " + response.text, "red")
+               exit()
+
+         #result = response.text
+         #print colored ("INFO: Result - " + result, "green")
+
+      """   End of password change block """
 
       """
       # Create the list of users
